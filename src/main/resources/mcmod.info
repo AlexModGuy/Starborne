@@ -1,0 +1,16 @@
+[
+{
+  "modid": "starborne",
+  "name": "Starborne",
+  "description": "A space travel mod.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Alex-the-666", "gegy1000"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
