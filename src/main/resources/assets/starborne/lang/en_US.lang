@@ -1,0 +1,12 @@
+# Tabs
+
+itemGroup.starborne.blocks=Starborne Blocks
+itemGroup.starborne.items=Starborne Items
+
+# Blocks
+
+tile.copper_ore.name=Copper Ore
+
+# Items
+
+item.copper_ingot.name=Copper Ingot
