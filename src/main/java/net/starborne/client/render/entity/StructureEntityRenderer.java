@@ -34,6 +34,11 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
     @Override
     public void doRender(StructureEntity entity, double x, double y, double z, float entityYaw, float partialTicks) {
         this.bindEntityTexture(entity);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, z);
+        GlStateManager.rotate(entityYaw, 0.0F, 1.0F, 0.0F);
+        GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, 1.0F, 0.0F, 0.0F);
+        GlStateManager.rotate(entity.rotationRoll, 0.0F, 0.0F, 1.0F);
         GlStateManager.disableLighting();
         Tessellator tessellator = Tessellator.getInstance();
         VertexBuffer buffer = tessellator.getBuffer();
@@ -51,6 +56,8 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
                 int chunkX = chunkPosition.getX() << 4;
                 int chunkY = chunkPosition.getY() << 4;
                 int chunkZ = chunkPosition.getZ() << 4;
+                GlStateManager.pushMatrix();
+                GlStateManager.translate(chunkX, chunkY, chunkZ);
                 for (int blockX = 0; blockX < 16; blockX++) {
                     for (int blockY = 0; blockY < 16; blockY++) {
                         for (int blockZ = 0; blockZ < 16; blockZ++) {
@@ -58,16 +65,15 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
                             if (state.getBlock() != Blocks.AIR) {
                                 GlStateManager.pushMatrix();
                                 buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
-                                GlStateManager.translate(x, y, z);
-                                GlStateManager.rotate(entityYaw, 0.0F, 1.0F, 0.0F);
-                                GlStateManager.translate(chunkX + blockX - 0.5, chunkY + blockY, chunkZ + blockZ - 0.5);
-                                blockModelRenderer.renderModel(entity, rendererDispatcher.getModelForState(state), state, new BlockPos(0, 0, 0), buffer, false, MathHelper.getPositionRandom(position));
+                                GlStateManager.translate(blockX - 0.5, blockY, blockZ - 0.5);
+                                blockModelRenderer.renderModel(entity, rendererDispatcher.getModelForState(state), state, BlockPos.ORIGIN, buffer, false, MathHelper.getPositionRandom(position));
                                 tessellator.draw();
                                 GlStateManager.popMatrix();
                             }
                         }
                     }
                 }
+                GlStateManager.popMatrix();
             }
         }
         if (this.renderOutlines) {
@@ -75,6 +81,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
             GlStateManager.disableColorMaterial();
         }
         GlStateManager.enableLighting();
+        GlStateManager.popMatrix();
         super.doRender(entity, x, y, z, entityYaw, partialTicks);
     }
 

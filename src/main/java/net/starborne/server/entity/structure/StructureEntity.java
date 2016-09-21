@@ -37,10 +37,19 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     protected void entityInit() {
         this.chunks = new HashMap<>();
-        this.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
-        this.setBlockState(new BlockPos(0, 1, 0), Blocks.DIAMOND_BLOCK.getDefaultState());
-        this.setBlockState(new BlockPos(0, 2, 0), Blocks.GRASS.getDefaultState());
-        this.setBlockState(new BlockPos(0, 3, 0), Blocks.TORCH.getDefaultState());
+
+        if (!this.worldObj.isRemote) {
+            this.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
+            this.setBlockState(new BlockPos(0, 1, 0), Blocks.DIAMOND_BLOCK.getDefaultState());
+            this.setBlockState(new BlockPos(0, 2, 0), Blocks.GRASS.getDefaultState());
+            this.setBlockState(new BlockPos(0, 3, 0), Blocks.TORCH.getDefaultState());
+
+            this.setBlockState(new BlockPos(1, 1, 0), Blocks.WATER.getDefaultState());
+            this.setBlockState(new BlockPos(0, 1, 1), Blocks.LAVA.getDefaultState());
+
+            this.setBlockState(new BlockPos(-1, 1, 0), Blocks.ICE.getDefaultState());
+            this.setBlockState(new BlockPos(0, 1, -1), Blocks.CHEST.getDefaultState());
+        }
     }
 
     @Override
@@ -54,6 +63,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
                 this.dirty = false;
             }
         }
+        this.rotationPitch += 1.0F;
         this.rotationYaw += 1.0F;
     }
 
@@ -69,7 +79,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     }
 
     public BlockPos getPositionInChunk(BlockPos pos) {
-        return new BlockPos(pos.getX() & 16, pos.getY() & 16, pos.getZ() & 16);
+        return new BlockPos(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
     }
 
     public Map<BlockPos, EntityChunk> getChunks() {
@@ -183,7 +193,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
             chunk = new EntityChunk(this.worldObj, chunkPosition);
             this.chunks.put(chunkPosition, chunk);
         }
-        chunk.setBlockState(pos, state);
+        chunk.setBlockState(this.getPositionInChunk(pos), state);
         if (chunk.isEmpty()) {
             this.chunks.remove(chunkPosition);
         }
