@@ -13,7 +13,7 @@ public class StarbornePlugin implements IFMLLoadingPlugin {
 
     @Override
     public String[] getASMTransformerClass() {
-        return new String[] { "net.starborne.server.patcher.StarborneRuntimePatcher", "net.gegy1000.starborne.server.core.StarborneTransformer" };
+        return new String[] { "net.starborne.server.patcher.StarborneRuntimePatcher", "net.starborne.server.core.StarborneTransformer" };
     }
 
     @Override

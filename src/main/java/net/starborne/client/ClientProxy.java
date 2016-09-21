@@ -8,6 +8,7 @@ public class ClientProxy extends ServerProxy {
     @Override
     public void onPreInit() {
         super.onPreInit();
+        RenderRegistry.onPreInit();
         MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
     }
 
