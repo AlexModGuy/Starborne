@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.item.Item;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.starborne.Starborne;
-import net.starborne.client.render.entity.StructureEntityRenderer;
+import net.starborne.client.render.entity.structure.StructureEntityRenderer;
 import net.starborne.server.block.BlockRegistry;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.item.ItemRegistry;

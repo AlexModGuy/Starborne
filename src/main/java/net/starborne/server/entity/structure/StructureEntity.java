@@ -14,21 +14,16 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.util.Constants;
-import net.starborne.Starborne;
 import net.starborne.server.biome.BiomeHandler;
-import net.starborne.server.message.EntityChunkMessage;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class StructureEntity extends Entity implements IBlockAccess {
     public float rotationRoll;
 
     private Map<BlockPos, EntityChunk> chunks;
-    private List<EntityPlayerMP> tracking = new ArrayList<>();
-    private boolean dirty;
+    private Map<EntityPlayerMP, EntityChunkTracker> trackers;
 
     public StructureEntity(World world) {
         super(world);
@@ -36,7 +31,13 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     @Override
     protected void entityInit() {
-        this.chunks = new HashMap<>();
+        if (this.chunks == null) {
+            this.chunks = new HashMap<>();
+        }
+
+        if (this.trackers == null) {
+            this.trackers = new HashMap<>();
+        }
 
         if (!this.worldObj.isRemote) {
             this.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
@@ -48,30 +49,20 @@ public class StructureEntity extends Entity implements IBlockAccess {
             this.setBlockState(new BlockPos(0, 1, 1), Blocks.LAVA.getDefaultState());
 
             this.setBlockState(new BlockPos(-1, 1, 0), Blocks.ICE.getDefaultState());
-            this.setBlockState(new BlockPos(0, 1, -1), Blocks.CHEST.getDefaultState());
         }
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
-        if (this.dirty) {
-            if (this.tracking.size() > 0) {
-                for (EntityPlayerMP player : this.tracking) {
-                    this.syncChunks(player);
-                }
-                this.dirty = false;
+        if (!this.worldObj.isRemote) {
+            //TODO Improve trackers further
+            for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+                entry.getValue().update();
             }
         }
         this.rotationPitch += 1.0F;
         this.rotationYaw += 1.0F;
-    }
-
-    private void syncChunks(EntityPlayerMP player) {
-        //TODO more efficient way of sending chunks - single at a time and only when in range
-        for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
-            Starborne.networkWrapper.sendTo(new EntityChunkMessage(this.getEntityId(), entry.getValue()), player);
-        }
     }
 
     public BlockPos getChunkPosition(BlockPos pos) {
@@ -93,11 +84,10 @@ public class StructureEntity extends Entity implements IBlockAccess {
         for (int i = 0; i < chunks.tagCount(); i++) {
             NBTTagCompound chunkData = chunks.getCompoundTagAt(i);
             BlockPos position = BlockPos.fromLong(chunkData.getLong("Position"));
-            EntityChunk chunk = new EntityChunk(this.worldObj, position);
+            EntityChunk chunk = new EntityChunk(this, position);
             chunk.deserialize(chunkData);
-            this.chunks.put(position, chunk);
+            this.setChunk(position, chunk);
         }
-        this.dirty = true;
     }
 
     @Override
@@ -118,20 +108,25 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     public void addTrackingPlayer(EntityPlayerMP player) {
         super.addTrackingPlayer(player);
-        this.tracking.add(player);
-        if (!this.dirty) {
-            this.syncChunks(player);
+        EntityChunkTracker tracker = new EntityChunkTracker(this, player);
+        this.trackers.put(player, tracker);
+        for (Map.Entry<BlockPos, EntityChunk> chunk : this.chunks.entrySet()) {
+            tracker.setDirty(chunk.getValue());
         }
     }
 
     @Override
     public void removeTrackingPlayer(EntityPlayerMP player) {
         super.removeTrackingPlayer(player);
-        this.tracking.remove(player);
+        this.trackers.remove(player);
     }
 
     public void setChunk(BlockPos position, EntityChunk chunk) {
+        EntityChunk previous = this.chunks.get(position);
         this.chunks.put(position, chunk);
+        if (previous != null) {
+            previous.unload();
+        }
     }
 
     @Override
@@ -190,13 +185,16 @@ public class StructureEntity extends Entity implements IBlockAccess {
             if (state.getBlock() == Blocks.AIR) {
                 return;
             }
-            chunk = new EntityChunk(this.worldObj, chunkPosition);
-            this.chunks.put(chunkPosition, chunk);
+            chunk = new EntityChunk(this, chunkPosition);
+            this.setChunk(chunkPosition, chunk);
         }
         chunk.setBlockState(this.getPositionInChunk(pos), state);
         if (chunk.isEmpty()) {
+            chunk.unload();
             this.chunks.remove(chunkPosition);
         }
-        this.dirty = true;
+        for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+            entry.getValue().setDirty(chunk);
+        }
     }
 }

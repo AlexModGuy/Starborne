@@ -18,18 +18,20 @@ import java.util.List;
 import java.util.Map;
 
 public class EntityChunk {
-    private static final Block EMPTY = Blocks.AIR;
+    protected static final Block EMPTY = Blocks.AIR;
 
-    private final World world;
-    private final BlockPos position;
-    private final BlockStateContainer stateData;
-    private final Map<BlockPos, TileEntity> tileEntities = new HashMap<>();
+    protected final StructureEntity entity;
+    protected final World world;
+    protected final BlockPos position;
+    protected final BlockStateContainer stateData;
+    protected final Map<BlockPos, TileEntity> tileEntities = new HashMap<>();
 
-    private int blockCount;
-    private int tickedBlockCount;
+    protected int blockCount;
+    protected int tickedBlockCount;
 
-    public EntityChunk(World world, BlockPos position) {
-        this.world = world;
+    public EntityChunk(StructureEntity entity, BlockPos position) {
+        this.entity = entity;
+        this.world = entity.worldObj;
         this.position = position;
         this.stateData = new BlockStateContainer();
     }
@@ -42,11 +44,11 @@ public class EntityChunk {
         return this.stateData.get(x, y, z);
     }
 
-    public void setBlockState(BlockPos position, IBlockState state) {
-        this.setBlockState(position.getX(), position.getY(), position.getZ(), state);
+    public boolean setBlockState(BlockPos position, IBlockState state) {
+        return this.setBlockState(position.getX(), position.getY(), position.getZ(), state);
     }
 
-    public void setBlockState(int x, int y, int z, IBlockState state) {
+    public boolean setBlockState(int x, int y, int z, IBlockState state) {
         if (state instanceof IExtendedBlockState) {
             state = ((IExtendedBlockState) state).getClean();
         }
@@ -72,6 +74,7 @@ public class EntityChunk {
         } else if (previousBlock.hasTileEntity(state)) {
             this.tileEntities.remove(position);
         }
+        return previousState != state;
     }
 
     public boolean isEmpty() {
@@ -146,7 +149,7 @@ public class EntityChunk {
             int id = entryTag.getInteger("I");
             IBlockState state = Block.getStateById(id);
             for (int repeat = 0; repeat < repeats; repeat++) {
-                this.setBlockState(blockX, blockY, blockZ, state);
+                this.stateData.set(blockX, blockY, blockZ, state);
                 blockX++;
                 if (blockX >= 16) {
                     blockX = 0;
@@ -154,20 +157,21 @@ public class EntityChunk {
                     if (blockY >= 16) {
                         blockY = 0;
                         blockZ++;
-                        if (blockZ >= 16) {
-                            return;
-                        }
                     }
                 }
             }
         }
+        this.recalculateBlocks();
     }
 
-    private class SaveEntry {
-        private int repeats;
-        private IBlockState state;
+    public void unload() {
+    }
 
-        private SaveEntry(IBlockState state) {
+    protected class SaveEntry {
+        protected int repeats;
+        protected IBlockState state;
+
+        protected SaveEntry(IBlockState state) {
             this.state = state;
             this.repeats = 1;
         }

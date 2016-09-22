@@ -66,6 +66,24 @@ String getModFile() {
     return path;
 }
 
+jar {
+    manifest {
+        attributes "FMLAT": "starborne_at.cfg"
+        attributes "FMLCorePlugin": "net.starborne.server.core.StarbornePlugin"
+        attributes "FMLCorePluginContainsFMLMod": "true"
+    }
+}
+
+task devJar(type: Jar) {
+    classifier = "dev"
+    from sourceSets.main.output
+    manifest {
+        attributes "FMLAT": "starborne_at.cfg"
+        attributes "FMLCorePlugin": "net.starborne.server.core.StarbornePlugin"
+        attributes "FMLCorePluginContainsFMLMod": "true"
+    }
+}
+
 String getVersion(String type, String mod_file) {
     String major = "0";
     String revision = "0";

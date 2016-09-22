@@ -2,61 +2,56 @@ package net.starborne.server.message;
 
 import io.netty.buffer.ByteBuf;
 import net.ilexiconn.llibrary.server.network.AbstractMessage;
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
-import net.starborne.server.entity.structure.ClientEntityChunk;
-import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
 
-public class EntityChunkMessage extends AbstractMessage<EntityChunkMessage> {
+public class SetEntityBlockMessage extends AbstractMessage<SetEntityBlockMessage> {
     private int entity;
     private BlockPos position;
-    private NBTTagCompound data;
+    private IBlockState state;
 
-    public EntityChunkMessage() {
+    public SetEntityBlockMessage() {
     }
 
-    public EntityChunkMessage(int entity, EntityChunk chunk) {
+    public SetEntityBlockMessage(int entity, BlockPos position, IBlockState state) {
         this.entity = entity;
-        this.position = chunk.getPosition();
-        this.data = new NBTTagCompound();
-        chunk.serialize(this.data);
+        this.position = position;
+        this.state = state;
     }
 
     @Override
-    public void onClientReceived(Minecraft client, EntityChunkMessage message, EntityPlayer player, MessageContext context) {
+    public void onClientReceived(Minecraft client, SetEntityBlockMessage message, EntityPlayer player, MessageContext context) {
         Entity entity = client.theWorld.getEntityByID(message.entity);
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
-            EntityChunk chunk = new ClientEntityChunk(structureEntity, message.position);
-            chunk.deserialize(message.data);
-            structureEntity.setChunk(message.position, chunk);
+            structureEntity.setBlockState(message.position, message.state);
         }
     }
 
     @Override
-    public void onServerReceived(MinecraftServer server, EntityChunkMessage message, EntityPlayer player, MessageContext context) {
+    public void onServerReceived(MinecraftServer server, SetEntityBlockMessage message, EntityPlayer player, MessageContext context) {
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
         this.entity = buf.readInt();
         this.position = BlockPos.fromLong(buf.readLong());
-        this.data = ByteBufUtils.readTag(buf);
+        this.state = Block.getStateById(buf.readInt());
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         buf.writeInt(this.entity);
         buf.writeLong(this.position.toLong());
-        ByteBufUtils.writeTag(buf, this.data);
+        buf.writeInt(Block.getStateId(this.state));
     }
 
     @Override
