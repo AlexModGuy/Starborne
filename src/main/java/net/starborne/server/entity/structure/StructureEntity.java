@@ -15,11 +15,14 @@ import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.util.Constants;
 import net.starborne.server.biome.BiomeHandler;
+import net.starborne.server.entity.structure.world.StructureWorld;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class StructureEntity extends Entity implements IBlockAccess {
+    public StructureWorld structureWorld;
     public float rotationRoll;
 
     private Map<BlockPos, EntityChunk> chunks;
@@ -31,8 +34,12 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     @Override
     protected void entityInit() {
+        if (this.structureWorld == null) {
+            this.structureWorld = new StructureWorld(this);
+        }
+
         if (this.chunks == null) {
-            this.chunks = new HashMap<>();
+            this.chunks = Collections.synchronizedMap(new HashMap<>());
         }
 
         if (this.trackers == null) {
@@ -45,10 +52,11 @@ public class StructureEntity extends Entity implements IBlockAccess {
             this.setBlockState(new BlockPos(0, 2, 0), Blocks.GRASS.getDefaultState());
             this.setBlockState(new BlockPos(0, 3, 0), Blocks.TORCH.getDefaultState());
 
-            this.setBlockState(new BlockPos(1, 1, 0), Blocks.WATER.getDefaultState());
-            this.setBlockState(new BlockPos(0, 1, 1), Blocks.LAVA.getDefaultState());
+            this.setBlockState(new BlockPos(1, 1, 0), Blocks.FLOWING_WATER.getDefaultState());
+            this.setBlockState(new BlockPos(0, 1, 1), Blocks.FLOWING_LAVA.getDefaultState());
 
             this.setBlockState(new BlockPos(-1, 1, 0), Blocks.ICE.getDefaultState());
+            this.setBlockState(new BlockPos(0, 1, -1), Blocks.CHEST.getDefaultState());
         }
     }
 
@@ -59,6 +67,12 @@ public class StructureEntity extends Entity implements IBlockAccess {
             //TODO Improve trackers further
             for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
                 entry.getValue().update();
+            }
+            //TODO only update tracked chunks
+            synchronized (this.chunks) {
+                for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
+                    entry.getValue().update();
+                }
             }
         }
         this.rotationPitch += 1.0F;
@@ -74,7 +88,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
     }
 
     public Map<BlockPos, EntityChunk> getChunks() {
-        return this.chunks;
+        synchronized (this.chunks) {
+            return this.chunks;
+        }
     }
 
     @Override
@@ -94,12 +110,14 @@ public class StructureEntity extends Entity implements IBlockAccess {
     protected void writeEntityToNBT(NBTTagCompound compound) {
         compound.setFloat("Roll", this.rotationRoll);
         NBTTagList chunks = new NBTTagList();
-        for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
-            if (!entry.getValue().isEmpty()) {
-                NBTTagCompound chunkData = new NBTTagCompound();
-                chunkData.setLong("Position", entry.getKey().toLong());
-                entry.getValue().serialize(chunkData);
-                chunks.appendTag(chunkData);
+        synchronized (this.chunks) {
+            for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
+                if (!entry.getValue().isEmpty()) {
+                    NBTTagCompound chunkData = new NBTTagCompound();
+                    chunkData.setLong("Position", entry.getKey().toLong());
+                    entry.getValue().serialize(chunkData);
+                    chunks.appendTag(chunkData);
+                }
             }
         }
         compound.setTag("Chunks", chunks);
@@ -110,8 +128,10 @@ public class StructureEntity extends Entity implements IBlockAccess {
         super.addTrackingPlayer(player);
         EntityChunkTracker tracker = new EntityChunkTracker(this, player);
         this.trackers.put(player, tracker);
-        for (Map.Entry<BlockPos, EntityChunk> chunk : this.chunks.entrySet()) {
-            tracker.setDirty(chunk.getValue());
+        synchronized (this.chunks) {
+            for (Map.Entry<BlockPos, EntityChunk> chunk : this.chunks.entrySet()) {
+                tracker.setDirty(chunk.getValue());
+            }
         }
     }
 
@@ -122,18 +142,22 @@ public class StructureEntity extends Entity implements IBlockAccess {
     }
 
     public void setChunk(BlockPos position, EntityChunk chunk) {
-        EntityChunk previous = this.chunks.get(position);
-        this.chunks.put(position, chunk);
-        if (previous != null) {
-            previous.unload();
+        synchronized (this.chunks) {
+            EntityChunk previous = this.chunks.get(position);
+            this.chunks.put(position, chunk);
+            if (previous != null) {
+                previous.unload();
+            }
         }
     }
 
     @Override
     public TileEntity getTileEntity(BlockPos pos) {
-        EntityChunk chunk = this.chunks.get(this.getChunkPosition(pos));
-        if (chunk != null) {
-            return chunk.getTileEntity(this.getPositionInChunk(pos));
+        synchronized (this.chunks) {
+            EntityChunk chunk = this.chunks.get(this.getChunkPosition(pos));
+            if (chunk != null) {
+                return chunk.getTileEntity(this.getPositionInChunk(pos));
+            }
         }
         return null;
     }
@@ -145,9 +169,11 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     @Override
     public IBlockState getBlockState(BlockPos pos) {
-        EntityChunk chunk = this.chunks.get(this.getChunkPosition(pos));
-        if (chunk != null) {
-            return chunk.getBlockState(this.getPositionInChunk(pos));
+        synchronized (this.chunks) {
+            EntityChunk chunk = this.chunks.get(this.getChunkPosition(pos));
+            if (chunk != null) {
+                return chunk.getBlockState(this.getPositionInChunk(pos));
+            }
         }
         return Blocks.AIR.getDefaultState();
     }
@@ -178,23 +204,29 @@ public class StructureEntity extends Entity implements IBlockAccess {
         return this.getBlockState(pos).isSideSolid(this, pos, side);
     }
 
-    public void setBlockState(BlockPos pos, IBlockState state) {
+    public boolean setBlockState(BlockPos pos, IBlockState state) {
         BlockPos chunkPosition = this.getChunkPosition(pos);
-        EntityChunk chunk = this.chunks.get(chunkPosition);
+        EntityChunk chunk;
+        synchronized (this.chunks) {
+            chunk = this.chunks.get(chunkPosition);
+        }
         if (chunk == null) {
             if (state.getBlock() == Blocks.AIR) {
-                return;
+                return false;
             }
             chunk = new EntityChunk(this, chunkPosition);
             this.setChunk(chunkPosition, chunk);
         }
-        chunk.setBlockState(this.getPositionInChunk(pos), state);
+        boolean success = chunk.setBlockState(this.getPositionInChunk(pos), state);
         if (chunk.isEmpty()) {
             chunk.unload();
-            this.chunks.remove(chunkPosition);
+            synchronized (this.chunks) {
+                this.chunks.remove(chunkPosition);
+            }
         }
         for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
             entry.getValue().setDirty(chunk);
         }
+        return success;
     }
 }

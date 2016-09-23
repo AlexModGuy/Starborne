@@ -17,7 +17,9 @@ public class ClientEntityChunk extends EntityChunk {
     @Override
     public boolean setBlockState(int x, int y, int z, IBlockState state) {
         if (super.setBlockState(x, y, z, state)) {
-            this.renderedChunk.rebuildLayer(state.getBlock().getBlockLayer());
+            if (!this.loading) {
+                this.renderedChunk.rebuildLayer(state.getBlock().getBlockLayer());
+            }
             return true;
         }
         return false;
