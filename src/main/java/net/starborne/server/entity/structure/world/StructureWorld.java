@@ -2,6 +2,7 @@ package net.starborne.server.entity.structure.world;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.MinecraftException;
@@ -15,6 +16,7 @@ import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.starborne.server.entity.structure.StructureEntity;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class StructureWorld extends World {
@@ -106,5 +108,10 @@ public class StructureWorld extends World {
     @Override
     public boolean isAirBlock(BlockPos pos) {
         return this.entity.isAirBlock(pos);
+    }
+
+    @Override
+    public TileEntity getTileEntity(BlockPos pos) {
+        return this.entity.getTileEntity(pos);
     }
 }

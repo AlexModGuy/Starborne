@@ -2,6 +2,7 @@ package net.starborne.server.entity.structure;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.starborne.client.render.entity.structure.RenderedChunk;
@@ -35,6 +36,24 @@ public class ClientEntityChunk extends EntityChunk {
     public void unload() {
         super.unload();
         this.renderedChunk.delete();
+    }
+
+    @Override
+    public void update() {
+        super.update();
+        this.renderedChunk.update();
+    }
+
+    @Override
+    protected void addTileEntity(TileEntity tileEntity, BlockPos position) {
+        super.addTileEntity(tileEntity, position);
+        this.renderedChunk.addTileEntity(tileEntity);
+    }
+
+    @Override
+    protected void removeTileEntity(BlockPos position) {
+        this.renderedChunk.removeTileEntity(this.getTileEntity(position));
+        super.removeTileEntity(position);
     }
 
     public RenderedChunk getRenderedChunk() {

@@ -40,7 +40,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
                     ClientEntityChunk clientChunk = (ClientEntityChunk) chunk;
                     GlStateManager.pushMatrix();
                     GlStateManager.translate(chunkX - 0.5, chunkY, chunkZ - 0.5);
-                    clientChunk.getRenderedChunk().render();
+                    clientChunk.getRenderedChunk().render(partialTicks);
                     GlStateManager.popMatrix();
                 }
             }
