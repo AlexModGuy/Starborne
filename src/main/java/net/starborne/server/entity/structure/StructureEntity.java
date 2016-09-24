@@ -18,8 +18,9 @@ import net.starborne.Starborne;
 import net.starborne.server.biome.BiomeHandler;
 import net.starborne.server.entity.structure.world.StructureWorld;
 
-import javax.vecmath.impl.Matrix4d;
-import javax.vecmath.impl.Vector3d;
+import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3d;
+import javax.vecmath.Vector3d;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,14 +28,19 @@ import java.util.Map;
 public class StructureEntity extends Entity implements IBlockAccess {
     public StructureWorld structureWorld;
     public float rotationRoll;
+    public float prevRotationRoll;
 
     private Map<BlockPos, EntityChunk> chunks;
     private Map<EntityPlayerMP, EntityChunkTracker> trackers;
 
     private ArrayDeque<ChunkQueue> queuedChunks;
 
+    private Matrix4d transformMatrix = new Matrix4d();
+    private Matrix4d untransformMatrix = new Matrix4d();
+
     public StructureEntity(World world) {
         super(world);
+        this.ignoreFrustumCheck = true;
     }
 
     @Override
@@ -88,7 +94,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     @Override
     public void onUpdate() {
+        this.prevRotationRoll = this.rotationRoll;
         super.onUpdate();
+
         this.structureWorld.tick();
         while (this.queuedChunks.size() > 0) {
             ChunkQueue queue = this.queuedChunks.poll();
@@ -110,6 +118,39 @@ public class StructureEntity extends Entity implements IBlockAccess {
         }
         this.rotationPitch += 1.0F;
         this.rotationYaw += 1.0F;
+
+        if (this.posX != this.prevPosX || this.posY != this.prevPosY || this.posZ != this.prevPosZ || this.rotationYaw != this.prevRotationYaw || this.rotationPitch != this.prevRotationPitch || this.rotationRoll != this.prevRotationRoll) {
+            Matrix4d transform = new Matrix4d();
+
+            this.transformMatrix.setIdentity();
+            transform.setIdentity();
+            transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
+            this.transformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotY(Math.toRadians(this.rotationYaw));
+            this.transformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotX(Math.toRadians(this.rotationPitch));
+            this.transformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotZ(Math.toRadians(this.rotationRoll));
+            this.transformMatrix.mul(transform);
+
+            this.untransformMatrix.setIdentity();
+            transform.setIdentity();
+            transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
+            this.untransformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotY(Math.toRadians(this.rotationYaw));
+            this.untransformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotX(Math.toRadians(this.rotationPitch));
+            this.untransformMatrix.mul(transform);
+            transform.setIdentity();
+            transform.rotZ(Math.toRadians(this.rotationRoll));
+            this.untransformMatrix.mul(transform);
+            this.untransformMatrix.invert();
+        }
     }
 
     public BlockPos getChunkPosition(BlockPos pos) {
@@ -258,47 +299,14 @@ public class StructureEntity extends Entity implements IBlockAccess {
         matrix.setIdentity();
         Matrix4d transform = new Matrix4d();
         transform.setIdentity();
-        transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
-        matrix.mul(transform);
-        transform.setIdentity();
-        transform.rotY(Math.toRadians(this.rotationYaw));
-        matrix.mul(transform);
-        transform.setIdentity();
-        transform.rotX(Math.toRadians(this.rotationPitch));
-        matrix.mul(transform);
-        transform.setIdentity();
-        transform.rotZ(Math.toRadians(this.rotationRoll));
-        matrix.mul(transform);
-        transform.setIdentity();
         transform.setTranslation(position);
-        matrix.mul(transform);
+        matrix.mul(this.transformMatrix, transform);
         return new Vector3d(matrix.m03, matrix.m13, matrix.m23);
     }
 
-    public Vector3d getUntransformedPosition(Vector3d position) {
-        Matrix4d matrix = new Matrix4d();
-        matrix.setIdentity();
-        Matrix4d transform = new Matrix4d();
-
-        transform.setIdentity();
-        transform.setTranslation(new Vector3d(-this.posX, -this.posY, -this.posZ));
-        matrix.mul(transform);
-
-        transform.setIdentity();
-        transform.rotY(Math.toRadians(this.rotationYaw));
-        matrix.mul(transform);
-        transform.setIdentity();
-        transform.rotX(Math.toRadians(this.rotationPitch));
-        matrix.mul(transform);
-        transform.setIdentity();
-        transform.rotZ(Math.toRadians(this.rotationRoll));
-        matrix.mul(transform);
-
-        transform.setIdentity();
-        transform.setTranslation(position);
-        matrix.mul(transform);
-
-        return new Vector3d(matrix.m03, matrix.m13, matrix.m23);
+    public Point3d getUntransformedPosition(Point3d position) {
+        this.untransformMatrix.transform(position);
+        return position;
     }
 
     private class ChunkQueue {

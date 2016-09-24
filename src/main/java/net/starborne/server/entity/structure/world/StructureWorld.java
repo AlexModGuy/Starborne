@@ -35,7 +35,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import net.starborne.server.entity.structure.StructureEntity;
 import org.apache.logging.log4j.LogManager;
 
-import javax.vecmath.impl.Vector3d;
+import javax.vecmath.Vector3d;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;

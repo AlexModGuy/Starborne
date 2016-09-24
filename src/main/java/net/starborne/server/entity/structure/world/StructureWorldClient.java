@@ -3,11 +3,10 @@ package net.starborne.server.entity.structure.world;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.starborne.server.entity.structure.StructureEntity;
 
-import javax.vecmath.impl.Vector3d;
+import javax.vecmath.Point3d;
 import java.util.Random;
 
 public class StructureWorldClient extends StructureWorld {
@@ -23,8 +22,7 @@ public class StructureWorldClient extends StructureWorld {
         super.tick();
         EntityPlayerSP player = this.mc.thePlayer;
         if (player != null) {
-            Vector3d untransformedPosition = this.entity.getUntransformedPosition(new Vector3d(player.posX, player.posY, player.posZ));
-            System.out.println(untransformedPosition);
+            Point3d untransformedPosition = this.entity.getUntransformedPosition(new Point3d(player.posX, player.posY, player.posZ));
             this.runDisplayTicks((int) untransformedPosition.x, (int) untransformedPosition.y, (int) untransformedPosition.z);
         }
     }
