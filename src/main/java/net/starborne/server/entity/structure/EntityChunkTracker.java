@@ -19,7 +19,7 @@ public class EntityChunkTracker {
 
     public void update() {
         if (this.dirty.size() > 0) {
-            Starborne.networkWrapper.sendTo(new EntityChunkMessage(this.entity.getEntityId(), this.dirty.get(0)), player);
+            Starborne.networkWrapper.sendTo(new EntityChunkMessage(this.entity.getEntityId(), this.dirty.get(0)), this.player);
             this.dirty.remove(0);
         }
     }

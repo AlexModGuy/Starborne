@@ -14,9 +14,12 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.util.Constants;
+import net.starborne.Starborne;
 import net.starborne.server.biome.BiomeHandler;
 import net.starborne.server.entity.structure.world.StructureWorld;
 
+import javax.vecmath.impl.Matrix4d;
+import javax.vecmath.impl.Vector3d;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +40,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     protected void entityInit() {
         if (this.structureWorld == null) {
-            this.structureWorld = new StructureWorld(this);
+            this.structureWorld = Starborne.PROXY.createStructureWorld(this);
         }
         if (this.chunks == null) {
             this.chunks = new HashMap<>();
@@ -52,7 +55,18 @@ public class StructureEntity extends Entity implements IBlockAccess {
         if (!this.worldObj.isRemote) {
             this.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
             this.setBlockState(new BlockPos(0, 1, 0), Blocks.DIAMOND_BLOCK.getDefaultState());
+
             this.setBlockState(new BlockPos(0, 2, 0), Blocks.GRASS.getDefaultState());
+            this.setBlockState(new BlockPos(1, 2, 0), Blocks.GRASS.getDefaultState());
+            this.setBlockState(new BlockPos(-1, 2, 0), Blocks.GRASS.getDefaultState());
+            this.setBlockState(new BlockPos(0, 2, 1), Blocks.GRASS.getDefaultState());
+            this.setBlockState(new BlockPos(0, 2, -1), Blocks.GRASS.getDefaultState());
+
+            this.setBlockState(new BlockPos(1, 3, 0), Blocks.TORCH.getDefaultState());
+            this.setBlockState(new BlockPos(-1, 3, 0), Blocks.TORCH.getDefaultState());
+            this.setBlockState(new BlockPos(0, 3, 1), Blocks.TORCH.getDefaultState());
+            this.setBlockState(new BlockPos(0, 3, -1), Blocks.TORCH.getDefaultState());
+
             this.setBlockState(new BlockPos(0, 3, 0), Blocks.ENCHANTING_TABLE.getDefaultState());
 
             this.setBlockState(new BlockPos(1, 1, 0), Blocks.FLOWING_WATER.getDefaultState());
@@ -75,6 +89,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     public void onUpdate() {
         super.onUpdate();
+        this.structureWorld.tick();
         while (this.queuedChunks.size() > 0) {
             ChunkQueue queue = this.queuedChunks.poll();
             if (queue.remove) {
@@ -236,6 +251,54 @@ public class StructureEntity extends Entity implements IBlockAccess {
             entry.getValue().setDirty(chunk);
         }
         return success;
+    }
+
+    public Vector3d getTransformedPosition(Vector3d position) {
+        Matrix4d matrix = new Matrix4d();
+        matrix.setIdentity();
+        Matrix4d transform = new Matrix4d();
+        transform.setIdentity();
+        transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.rotY(Math.toRadians(this.rotationYaw));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.rotX(Math.toRadians(this.rotationPitch));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.rotZ(Math.toRadians(this.rotationRoll));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.setTranslation(position);
+        matrix.mul(transform);
+        return new Vector3d(matrix.m03, matrix.m13, matrix.m23);
+    }
+
+    public Vector3d getUntransformedPosition(Vector3d position) {
+        Matrix4d matrix = new Matrix4d();
+        matrix.setIdentity();
+        Matrix4d transform = new Matrix4d();
+
+        transform.setIdentity();
+        transform.setTranslation(new Vector3d(-this.posX, -this.posY, -this.posZ));
+        matrix.mul(transform);
+
+        transform.setIdentity();
+        transform.rotY(Math.toRadians(this.rotationYaw));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.rotX(Math.toRadians(this.rotationPitch));
+        matrix.mul(transform);
+        transform.setIdentity();
+        transform.rotZ(Math.toRadians(this.rotationRoll));
+        matrix.mul(transform);
+
+        transform.setIdentity();
+        transform.setTranslation(position);
+        matrix.mul(transform);
+
+        return new Vector3d(matrix.m03, matrix.m13, matrix.m23);
     }
 
     private class ChunkQueue {

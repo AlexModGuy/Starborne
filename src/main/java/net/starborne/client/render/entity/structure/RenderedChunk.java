@@ -95,26 +95,14 @@ public class RenderedChunk {
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.enableBlend();
         }
-        GlStateManager.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
-        GlStateManager.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.lightmapTexUnit);
-        GlStateManager.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
-        GlStateManager.glEnableClientState(GL11.GL_COLOR_ARRAY);
+        this.enableState();
         VertexBuffer buffer = this.buffers[layer.ordinal()];
         buffer.bindBuffer();
         this.bindAttributes();
         buffer.drawArrays(GL11.GL_QUADS);
         buffer.unbindBuffer();
         GlStateManager.resetColor();
-        GlStateManager.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
-        GlStateManager.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.lightmapTexUnit);
-        GlStateManager.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
-        GlStateManager.glDisableClientState(GL11.GL_COLOR_ARRAY);
+        this.disableState();
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.disableBlend();
         }
@@ -187,5 +175,25 @@ public class RenderedChunk {
         for (BlockRenderLayer layer : BlockRenderLayer.values()) {
             this.rebuildLayer(layer);
         }
+    }
+
+    private void enableState() {
+        GlStateManager.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
+        GlStateManager.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.lightmapTexUnit);
+        GlStateManager.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
+        GlStateManager.glEnableClientState(GL11.GL_COLOR_ARRAY);
+    }
+
+    private void disableState() {
+        GlStateManager.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
+        GlStateManager.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.lightmapTexUnit);
+        GlStateManager.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+        OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
+        GlStateManager.glDisableClientState(GL11.GL_COLOR_ARRAY);
     }
 }
