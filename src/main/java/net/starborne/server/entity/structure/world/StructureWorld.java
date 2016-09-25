@@ -35,6 +35,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import net.starborne.server.entity.structure.StructureEntity;
 import org.apache.logging.log4j.LogManager;
 
+import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 import java.io.File;
 import java.util.ArrayList;
@@ -151,7 +152,7 @@ public class StructureWorld extends World {
 
     @Override
     public EntityPlayer getClosestPlayer(double posX, double posY, double posZ, double distance, boolean spectator) {
-        Vector3d transformed = this.entity.getTransformedPosition(new Vector3d(posX, posY, posZ));
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(posX, posY, posZ));
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
@@ -160,7 +161,7 @@ public class StructureWorld extends World {
 
     @Override
     public EntityPlayer getNearestAttackablePlayer(double posX, double posY, double posZ, double maxXZDistance, double maxYDistance, Function<EntityPlayer, Double> serializer, Predicate<EntityPlayer> selector) {
-        Vector3d transformed = this.entity.getTransformedPosition(new Vector3d(posX, posY, posZ));
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(posX, posY, posZ));
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
@@ -194,7 +195,7 @@ public class StructureWorld extends World {
 
     @Override
     public boolean spawnEntityInWorld(Entity entity) {
-        Vector3d transformedPosition = this.entity.getTransformedPosition(new Vector3d(entity.posX, entity.posY, entity.posZ));
+        Point3d transformedPosition = this.entity.getTransformedPosition(new Point3d(entity.posX, entity.posY, entity.posZ));
         entity.posX = transformedPosition.getX();
         entity.posY = transformedPosition.getY();
         entity.posZ = transformedPosition.getZ();
@@ -203,7 +204,7 @@ public class StructureWorld extends World {
 
     @Override
     public void spawnParticle(EnumParticleTypes particleType, double posX, double posY, double posZ, double xSpeed, double ySpeed, double zSpeed, int... parameters) {
-        Vector3d transformed = this.entity.getTransformedPosition(new Vector3d(posX, posY, posZ));
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(posX, posY, posZ));
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
@@ -213,7 +214,7 @@ public class StructureWorld extends World {
     @Override
     @SideOnly(Side.CLIENT)
     public void spawnParticle(EnumParticleTypes particleType, boolean ignoreRange, double posX, double posY, double posZ, double xSpeed, double ySpeed, double zSpeed, int... parameters) {
-        Vector3d transformed = this.entity.getTransformedPosition(new Vector3d(posX, posY, posZ));
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(posX, posY, posZ));
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();

@@ -17,10 +17,9 @@ import net.minecraftforge.common.util.Constants;
 import net.starborne.Starborne;
 import net.starborne.server.biome.BiomeHandler;
 import net.starborne.server.entity.structure.world.StructureWorld;
+import net.starborne.server.util.Matrix;
 
-import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
-import javax.vecmath.Vector3d;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +34,10 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     private ArrayDeque<ChunkQueue> queuedChunks;
 
-    private Matrix4d transformMatrix = new Matrix4d();
-    private Matrix4d untransformMatrix = new Matrix4d();
+    private Matrix transformMatrix = new Matrix(3);
+    private Matrix untransformMatrix = new Matrix(3);
+
+    private boolean deserializing;
 
     public StructureEntity(World world) {
         super(world);
@@ -120,35 +121,14 @@ public class StructureEntity extends Entity implements IBlockAccess {
         this.rotationYaw += 1.0F;
 
         if (this.posX != this.prevPosX || this.posY != this.prevPosY || this.posZ != this.prevPosZ || this.rotationYaw != this.prevRotationYaw || this.rotationPitch != this.prevRotationPitch || this.rotationRoll != this.prevRotationRoll) {
-            Matrix4d transform = new Matrix4d();
-
             this.transformMatrix.setIdentity();
-            transform.setIdentity();
-            transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
-            this.transformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotY(Math.toRadians(this.rotationYaw));
-            this.transformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotX(Math.toRadians(this.rotationPitch));
-            this.transformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotZ(Math.toRadians(this.rotationRoll));
-            this.transformMatrix.mul(transform);
+            this.transformMatrix.translate(this.posX, this.posY, this.posZ);
+            this.transformMatrix.rotate(Math.toRadians(this.rotationYaw), 0.0F, 1.0F, 0.0F);
+            this.transformMatrix.rotate(Math.toRadians(this.rotationPitch), 1.0F, 0.0F, 0.0F);
+            this.transformMatrix.rotate(Math.toRadians(this.rotationRoll), 0.0F, 0.0F, 1.0F);
 
             this.untransformMatrix.setIdentity();
-            transform.setIdentity();
-            transform.setTranslation(new Vector3d(this.posX, this.posY, this.posZ));
-            this.untransformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotY(Math.toRadians(this.rotationYaw));
-            this.untransformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotX(Math.toRadians(this.rotationPitch));
-            this.untransformMatrix.mul(transform);
-            transform.setIdentity();
-            transform.rotZ(Math.toRadians(this.rotationRoll));
-            this.untransformMatrix.mul(transform);
+            this.untransformMatrix.multiply(this.transformMatrix);
             this.untransformMatrix.invert();
         }
     }
@@ -167,6 +147,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound compound) {
+        this.deserializing = true;
         this.rotationRoll = compound.getFloat("Roll");
         NBTTagList chunks = compound.getTagList("Chunks", Constants.NBT.TAG_COMPOUND);
         for (int i = 0; i < chunks.tagCount(); i++) {
@@ -176,6 +157,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
             chunk.deserialize(chunkData);
             this.setChunk(position, chunk);
         }
+        this.deserializing = false;
     }
 
     @Override
@@ -294,14 +276,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
         return success;
     }
 
-    public Vector3d getTransformedPosition(Vector3d position) {
-        Matrix4d matrix = new Matrix4d();
-        matrix.setIdentity();
-        Matrix4d transform = new Matrix4d();
-        transform.setIdentity();
-        transform.setTranslation(position);
-        matrix.mul(this.transformMatrix, transform);
-        return new Vector3d(matrix.m03, matrix.m13, matrix.m23);
+    public Point3d getTransformedPosition(Point3d position) {
+        this.transformMatrix.transform(position);
+        return position;
     }
 
     public Point3d getUntransformedPosition(Point3d position) {
