@@ -29,6 +29,6 @@ public class ClientProxy extends ServerProxy {
 
     @Override
     public StructureWorld createStructureWorld(StructureEntity entity) {
-        return new StructureWorldClient(entity);
+        return entity.worldObj.isRemote ? new StructureWorldClient(entity) : super.createStructureWorld(entity);
     }
 }

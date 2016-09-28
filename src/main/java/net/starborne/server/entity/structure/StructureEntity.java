@@ -1,5 +1,6 @@
 package net.starborne.server.entity.structure;
 
+import net.minecraft.block.BlockLever;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -9,6 +10,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
@@ -69,9 +71,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
             this.setBlockState(new BlockPos(0, 2, 1), Blocks.GRASS.getDefaultState());
             this.setBlockState(new BlockPos(0, 2, -1), Blocks.GRASS.getDefaultState());
 
-            this.setBlockState(new BlockPos(1, 3, 0), Blocks.TORCH.getDefaultState());
+            this.setBlockState(new BlockPos(1, 3, 0), Blocks.LEVER.getDefaultState().withProperty(BlockLever.FACING, BlockLever.EnumOrientation.UP_X));
             this.setBlockState(new BlockPos(-1, 3, 0), Blocks.TORCH.getDefaultState());
-            this.setBlockState(new BlockPos(0, 3, 1), Blocks.TORCH.getDefaultState());
+            this.setBlockState(new BlockPos(0, 3, 1), Blocks.LEVER.getDefaultState().withProperty(BlockLever.FACING, BlockLever.EnumOrientation.UP_X));
             this.setBlockState(new BlockPos(0, 3, -1), Blocks.TORCH.getDefaultState());
 
             this.setBlockState(new BlockPos(0, 3, 0), Blocks.ENCHANTING_TABLE.getDefaultState());
@@ -117,8 +119,8 @@ public class StructureEntity extends Entity implements IBlockAccess {
         for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
             entry.getValue().update();
         }
-        this.rotationPitch += 1.0F;
-        this.rotationYaw += 1.0F;
+        this.rotationPitch += 0.1F;
+        this.rotationYaw += 0.1F;
 
         if (this.posX != this.prevPosX || this.posY != this.prevPosY || this.posZ != this.prevPosZ || this.rotationYaw != this.prevRotationYaw || this.rotationPitch != this.prevRotationPitch || this.rotationRoll != this.prevRotationRoll) {
             this.transformMatrix.setIdentity();
@@ -277,13 +279,27 @@ public class StructureEntity extends Entity implements IBlockAccess {
     }
 
     public Point3d getTransformedPosition(Point3d position) {
+        position.sub(new Point3d(0.5, 0.0, 0.5));
         this.transformMatrix.transform(position);
         return position;
     }
 
+    public Vec3d getTransformedPosition(Vec3d position) {
+        Point3d point = new Point3d(position.xCoord - 0.5, position.yCoord, position.zCoord - 0.5);
+        this.transformMatrix.transform(point);
+        return new Vec3d(point.getX(), point.getY(), point.getZ());
+    }
+
     public Point3d getUntransformedPosition(Point3d position) {
         this.untransformMatrix.transform(position);
+        position.add(new Point3d(0.5, 0.0, 0.5));
         return position;
+    }
+
+    public Vec3d getUntransformedPosition(Vec3d position) {
+        Point3d point = new Point3d(position.xCoord, position.yCoord, position.zCoord);
+        this.untransformMatrix.transform(point);
+        return new Vec3d(point.getX() + 0.5, point.getY(), point.getZ() + 0.5);
     }
 
     private class ChunkQueue {

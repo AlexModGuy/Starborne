@@ -9,6 +9,7 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.starborne.server.ServerProxy;
 import net.starborne.server.message.EntityChunkMessage;
+import net.starborne.server.message.InteractBlockEntityMessage;
 import net.starborne.server.message.SetEntityBlockMessage;
 
 @Mod(modid = Starborne.MODID, name = "Starborne", version = Starborne.VERSION, dependencies = "required-after:llibrary@[" + Starborne.LLIBRARY_VERSION + ",)")
@@ -23,7 +24,7 @@ public class Starborne {
     @SidedProxy(clientSide = "net.starborne.client.ClientProxy", serverSide = "net.starborne.server.ServerProxy")
     public static ServerProxy PROXY;
 
-    @NetworkWrapper({ EntityChunkMessage.class, SetEntityBlockMessage.class })
+    @NetworkWrapper({ EntityChunkMessage.class, SetEntityBlockMessage.class, InteractBlockEntityMessage.class })
     public static SimpleNetworkWrapper networkWrapper;
 
     @Mod.EventHandler

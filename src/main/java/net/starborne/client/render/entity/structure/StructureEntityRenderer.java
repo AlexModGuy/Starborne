@@ -1,13 +1,18 @@
 package net.starborne.client.render.entity.structure;
 
+import net.minecraft.block.material.Material;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.starborne.client.ClientEventHandler;
 import net.starborne.server.entity.structure.ClientEntityChunk;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
@@ -46,6 +51,24 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
             }
         }
         GlStateManager.enableLighting();
+        Map.Entry<StructureEntity, RayTraceResult> mouseOver = ClientEventHandler.mouseOver;
+        if (mouseOver != null && mouseOver.getKey() == entity) {
+            RayTraceResult result = mouseOver.getValue();
+            BlockPos pos = result.getBlockPos();
+            GlStateManager.translate(-0.5, 0.0, -0.5);
+            GlStateManager.enableBlend();
+            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+            GlStateManager.glLineWidth(2.0F);
+            GlStateManager.disableTexture2D();
+            GlStateManager.depthMask(false);
+            IBlockState state = entity.getBlockState(pos);
+            if (state.getMaterial() != Material.AIR) {
+                RenderGlobal.func_189697_a(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.0020000000949949026D), 0.0F, 0.0F, 0.0F, 0.4F);
+            }
+            GlStateManager.depthMask(true);
+            GlStateManager.enableTexture2D();
+            GlStateManager.disableBlend();
+        }
         GlStateManager.popMatrix();
         super.doRender(entity, x, y, z, entityYaw, partialTicks);
     }

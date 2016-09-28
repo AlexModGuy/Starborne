@@ -13,11 +13,15 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.MinecraftException;
 import net.minecraft.world.NextTickListEntry;
@@ -36,7 +40,6 @@ import net.starborne.server.entity.structure.StructureEntity;
 import org.apache.logging.log4j.LogManager;
 
 import javax.vecmath.Point3d;
-import javax.vecmath.Vector3d;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -112,7 +115,7 @@ public class StructureWorld extends World {
 
     @Override
     protected boolean isChunkLoaded(int x, int z, boolean allowEmpty) {
-        return true;
+        return false;
     }
 
     @Override
@@ -357,5 +360,123 @@ public class StructureWorld extends World {
 
     @Override
     protected void updateWeather() {
+    }
+
+    @Override
+    public RayTraceResult rayTraceBlocks(Vec3d start, Vec3d end, boolean traceLiquid, boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock) {
+        if (!Double.isNaN(start.xCoord) && !Double.isNaN(start.yCoord) && !Double.isNaN(start.zCoord)) {
+            if (!Double.isNaN(end.xCoord) && !Double.isNaN(end.yCoord) && !Double.isNaN(end.zCoord)) {
+                start = this.entity.getUntransformedPosition(start);
+                end = this.entity.getUntransformedPosition(end);
+                int endX = MathHelper.floor_double(end.xCoord);
+                int endY = MathHelper.floor_double(end.yCoord);
+                int endZ = MathHelper.floor_double(end.zCoord);
+                int traceX = MathHelper.floor_double(start.xCoord);
+                int traceY = MathHelper.floor_double(start.yCoord);
+                int traceZ = MathHelper.floor_double(start.zCoord);
+                BlockPos tracePos = new BlockPos(traceX, traceY, traceZ);
+                IBlockState startState = this.getBlockState(tracePos);
+                Block startBlock = startState.getBlock();
+                if ((!ignoreBlockWithoutBoundingBox || startState.getCollisionBoundingBox(this, tracePos) != Block.NULL_AABB) && startBlock.canCollideCheck(startState, traceLiquid)) {
+                    RayTraceResult result = startState.collisionRayTrace(this, tracePos, start, end);
+                    if (result != null) {
+                        return result;
+                    }
+                }
+                RayTraceResult result = null;
+                int ray = 200;
+                while (ray-- >= 0) {
+                    if (Double.isNaN(start.xCoord) || Double.isNaN(start.yCoord) || Double.isNaN(start.zCoord)) {
+                        return null;
+                    }
+                    if (traceX == endX && traceY == endY && traceZ == endZ) {
+                        return returnLastUncollidableBlock ? result : null;
+                    }
+                    boolean reachedX = true;
+                    boolean reachedY = true;
+                    boolean reachedZ = true;
+                    double targetX = 999.0;
+                    double targetY = 999.0;
+                    double targetZ = 999.0;
+                    if (endX > traceX) {
+                        targetX = traceX + 1.0;
+                    } else if (endX < traceX) {
+                        targetX = traceX;
+                    } else {
+                        reachedX = false;
+                    }
+                    if (endY > traceY) {
+                        targetY = traceY + 1.0;
+                    } else if (endY < traceY) {
+                        targetY = traceY;
+                    } else {
+                        reachedY = false;
+                    }
+                    if (endZ > traceZ) {
+                        targetZ = traceZ + 1.0;
+                    } else if (endZ < traceZ) {
+                        targetZ = traceZ;
+                    } else {
+                        reachedZ = false;
+                    }
+                    double deltaX = 999.0;
+                    double deltaY = 999.0;
+                    double deltaZ = 999.0;
+                    double totalDeltaX = end.xCoord - start.xCoord;
+                    double totalDeltaY = end.yCoord - start.yCoord;
+                    double totalDeltaZ = end.zCoord - start.zCoord;
+                    if (reachedX) {
+                        deltaX = (targetX - start.xCoord) / totalDeltaX;
+                    }
+                    if (reachedY) {
+                        deltaY = (targetY - start.yCoord) / totalDeltaY;
+                    }
+                    if (reachedZ) {
+                        deltaZ = (targetZ - start.zCoord) / totalDeltaZ;
+                    }
+                    if (deltaX == -0.0) {
+                        deltaX = -1.0E-4D;
+                    }
+                    if (deltaY == -0.0) {
+                        deltaY = -1.0E-4D;
+                    }
+                    if (deltaZ == -0.0) {
+                        deltaZ = -1.0E-4D;
+                    }
+                    EnumFacing sideHit;
+                    if (deltaX < deltaY && deltaX < deltaZ) {
+                        sideHit = endX > traceX ? EnumFacing.WEST : EnumFacing.EAST;
+                        start = new Vec3d(targetX, start.yCoord + totalDeltaY * deltaX, start.zCoord + totalDeltaZ * deltaX);
+                    } else if (deltaY < deltaZ) {
+                        sideHit = endY > traceY ? EnumFacing.DOWN : EnumFacing.UP;
+                        start = new Vec3d(start.xCoord + totalDeltaX * deltaY, targetY, start.zCoord + totalDeltaZ * deltaY);
+                    } else {
+                        sideHit = endZ > traceZ ? EnumFacing.NORTH : EnumFacing.SOUTH;
+                        start = new Vec3d(start.xCoord + totalDeltaX * deltaZ, start.yCoord + totalDeltaY * deltaZ, targetZ);
+                    }
+                    traceX = MathHelper.floor_double(start.xCoord) - (sideHit == EnumFacing.EAST ? 1 : 0);
+                    traceY = MathHelper.floor_double(start.yCoord) - (sideHit == EnumFacing.UP ? 1 : 0);
+                    traceZ = MathHelper.floor_double(start.zCoord) - (sideHit == EnumFacing.SOUTH ? 1 : 0);
+                    tracePos = new BlockPos(traceX, traceY, traceZ);
+                    IBlockState traceState = this.getBlockState(tracePos);
+                    Block traceBlock = traceState.getBlock();
+                    if (!ignoreBlockWithoutBoundingBox || traceState.getMaterial() == Material.PORTAL || traceState.getCollisionBoundingBox(this, tracePos) != Block.NULL_AABB) {
+                        if (traceBlock.canCollideCheck(traceState, traceLiquid)) {
+                            RayTraceResult finalResult = traceState.collisionRayTrace(this, tracePos, start, end);
+                            if (finalResult != null) {
+                                return finalResult;
+                            }
+                        } else {
+                            result = new RayTraceResult(RayTraceResult.Type.MISS, start, sideHit, tracePos);
+                        }
+                    }
+                }
+                return returnLastUncollidableBlock ? result : null;
+            } else {
+                return null;
+            }
+        } else {
+            return null;
+        }
     }
 }
