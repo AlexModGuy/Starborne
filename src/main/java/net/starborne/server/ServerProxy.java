@@ -7,6 +7,7 @@ import net.starborne.server.dimension.DimensionHandler;
 import net.starborne.server.entity.EntityHandler;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.world.StructureWorld;
+import net.starborne.server.entity.structure.world.StructureWorldServer;
 import net.starborne.server.item.ItemRegistry;
 
 public class ServerProxy {
@@ -29,6 +30,6 @@ public class ServerProxy {
     }
 
     public StructureWorld createStructureWorld(StructureEntity entity) {
-        return new StructureWorld(entity);
+        return new StructureWorldServer(entity);
     }
 }

@@ -158,6 +158,11 @@ public class RenderedChunk {
         net.minecraft.client.renderer.VertexBuffer builder = this.builders[layer.ordinal()];
         builder.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
         BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos globalPosition = new BlockPos.MutableBlockPos();
+        BlockPos chunkPosition = this.chunk.getPosition();
+        int offsetX = chunkPosition.getX() << 4;
+        int offsetY = chunkPosition.getY() << 4;
+        int offsetZ = chunkPosition.getZ() << 4;
         for (int blockX = 0; blockX < 16; blockX++) {
             for (int blockY = 0; blockY < 16; blockY++) {
                 for (int blockZ = 0; blockZ < 16; blockZ++) {
@@ -166,7 +171,8 @@ public class RenderedChunk {
                         EnumBlockRenderType renderType = state.getRenderType();
                         if (renderType != EnumBlockRenderType.INVISIBLE) {
                             position.setPos(blockX, blockY, blockZ);
-                            state = state.getActualState(this.entity, position);
+                            globalPosition.setPos(offsetX + blockX, offsetY + blockY, offsetZ + blockZ);
+                            state = state.getActualState(this.entity, globalPosition);
                             switch (renderType) {
                                 case MODEL:
                                     IBakedModel model = BLOCK_RENDERER_DISPATCHER.getModelForState(state);

@@ -13,6 +13,7 @@ import net.starborne.server.core.StarbornePlugin;
 import net.starborne.server.message.BreakBlockEntityMessage;
 import net.starborne.server.message.EntityChunkMessage;
 import net.starborne.server.message.InteractBlockEntityMessage;
+import net.starborne.server.message.PlayEventEntityMessage;
 import net.starborne.server.message.SetEntityBlockMessage;
 
 @Mod(modid = Starborne.MODID, name = "Starborne", version = Starborne.VERSION, dependencies = "required-after:llibrary@[" + Starborne.LLIBRARY_VERSION + ",)")
@@ -27,7 +28,7 @@ public class Starborne {
     @SidedProxy(clientSide = "net.starborne.client.ClientProxy", serverSide = "net.starborne.server.ServerProxy")
     public static ServerProxy PROXY;
 
-    @NetworkWrapper({ EntityChunkMessage.class, SetEntityBlockMessage.class, InteractBlockEntityMessage.class, BreakBlockEntityMessage.class })
+    @NetworkWrapper({ EntityChunkMessage.class, SetEntityBlockMessage.class, InteractBlockEntityMessage.class, BreakBlockEntityMessage.class, PlayEventEntityMessage.class })
     public static SimpleNetworkWrapper networkWrapper;
 
     @Mod.EventHandler

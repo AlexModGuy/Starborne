@@ -1,6 +1,7 @@
 package net.starborne.server.core;
 
 import net.minecraft.client.particle.Particle;
+import net.minecraft.util.math.Vec3d;
 import net.starborne.server.entity.structure.world.StructureWorld;
 
 import javax.vecmath.Point3d;
@@ -14,6 +15,10 @@ public class StarborneHooks {
             particle.prevPosX = transformed.getX();
             particle.prevPosY = transformed.getY();
             particle.prevPosZ = transformed.getZ();
+            Vec3d transformedVelocity = transforming.getEntity().getTransformedVector(new Vec3d(particle.motionX, particle.motionY, particle.motionZ));
+            particle.motionX = transformedVelocity.xCoord;
+            particle.motionY = transformedVelocity.yCoord;
+            particle.motionZ = transformedVelocity.zCoord;
         }
     }
 }

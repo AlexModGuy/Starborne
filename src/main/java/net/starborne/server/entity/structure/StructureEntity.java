@@ -21,6 +21,7 @@ import net.starborne.server.entity.structure.world.StructureWorld;
 import net.starborne.server.util.Matrix;
 
 import javax.vecmath.Point3d;
+import javax.vecmath.Vector3d;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
@@ -86,6 +87,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
                 this.chunks.remove(queue.position);
             } else {
                 this.chunks.put(queue.position, queue.chunk);
+            }
+            if (this.chunks.size() <= 0) {
+                this.setDead();
             }
         }
         if (!this.worldObj.isRemote) {
@@ -210,7 +214,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     }
 
     @Override
-    public Biome getBiomeGenForCoords(BlockPos pos) {
+    public Biome getBiome(BlockPos pos) {
         return BiomeHandler.SPACE;
     }
 
@@ -279,6 +283,16 @@ public class StructureEntity extends Entity implements IBlockAccess {
         Point3d point = new Point3d(position.xCoord, position.yCoord, position.zCoord);
         this.untransformMatrix.transform(point);
         return new Vec3d(point.getX() + 0.5, point.getY(), point.getZ() + 0.5);
+    }
+
+    public Vec3d getTransformedVector(Vec3d vec) {
+        Vector3d vector = new Vector3d(vec.xCoord, vec.yCoord, vec.zCoord);
+        this.transformMatrix.transform(vector);
+        return new Vec3d(vector.getX(), vector.getY(), vector.getZ());
+    }
+
+    public EntityChunk getChunkForBlock(BlockPos pos) {
+        return this.chunks.get(this.getChunkPosition(pos));
     }
 
     private class ChunkQueue {

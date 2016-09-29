@@ -11,7 +11,6 @@ import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
@@ -24,24 +23,17 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.IWorldEventListener;
-import net.minecraft.world.MinecraftException;
 import net.minecraft.world.NextTickListEntry;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldProvider;
 import net.minecraft.world.chunk.IChunkProvider;
-import net.minecraft.world.chunk.storage.IChunkLoader;
 import net.minecraft.world.gen.structure.StructureBoundingBox;
-import net.minecraft.world.gen.structure.template.TemplateManager;
-import net.minecraft.world.storage.IPlayerFileData;
-import net.minecraft.world.storage.ISaveHandler;
-import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
 import org.apache.logging.log4j.LogManager;
 
 import javax.vecmath.Point3d;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -60,53 +52,7 @@ public class StructureWorld extends World {
     protected final List<NextTickListEntry> currentScheduledTicks = new ArrayList<>();
 
     public StructureWorld(StructureEntity entity) {
-        super(new ISaveHandler() {
-            @Override
-            public WorldInfo loadWorldInfo() {
-                return null;
-            }
-
-            @Override
-            public void checkSessionLock() throws MinecraftException {
-            }
-
-            @Override
-            public IChunkLoader getChunkLoader(WorldProvider provider) {
-                return null;
-            }
-
-            @Override
-            public void saveWorldInfoWithPlayer(WorldInfo worldInformation, NBTTagCompound tagCompound) {
-            }
-
-            @Override
-            public void saveWorldInfo(WorldInfo worldInformation) {
-            }
-
-            @Override
-            public IPlayerFileData getPlayerNBTManager() {
-                return null;
-            }
-
-            @Override
-            public void flush() {
-            }
-
-            @Override
-            public File getWorldDirectory() {
-                return null;
-            }
-
-            @Override
-            public File getMapFileFromName(String mapName) {
-                return null;
-            }
-
-            @Override
-            public TemplateManager getStructureTemplateManager() {
-                return null;
-            }
-        }, entity.worldObj.getWorldInfo(), entity.worldObj.provider, entity.worldObj.theProfiler, entity.worldObj.isRemote);
+        super(new EntityWorldSaveHandler(), entity.worldObj.getWorldInfo(), entity.worldObj.provider, entity.worldObj.theProfiler, entity.worldObj.isRemote);
         this.entity = entity;
         this.fallback = entity.worldObj;
     }
@@ -134,6 +80,11 @@ public class StructureWorld extends World {
     @Override
     public int getLight(BlockPos pos, boolean checkNeighbors) {
         return 15; //TODO Lighting
+    }
+
+    @Override
+    public int getLight(BlockPos pos) {
+        return 15;
     }
 
     @Override
@@ -214,6 +165,10 @@ public class StructureWorld extends World {
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
+        Vec3d transformedVelocity = this.entity.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
+        xSpeed = transformedVelocity.xCoord;
+        ySpeed = transformedVelocity.yCoord;
+        zSpeed = transformedVelocity.zCoord;
         super.spawnParticle(particleType, posX, posY, posZ, xSpeed, ySpeed, zSpeed, parameters);
     }
 
@@ -224,6 +179,10 @@ public class StructureWorld extends World {
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
+        Vec3d transformedVelocity = this.entity.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
+        xSpeed = transformedVelocity.xCoord;
+        ySpeed = transformedVelocity.yCoord;
+        zSpeed = transformedVelocity.zCoord;
         super.spawnParticle(particleType, ignoreRange, posX, posY, posZ, xSpeed, ySpeed, zSpeed, parameters);
     }
 
@@ -483,11 +442,24 @@ public class StructureWorld extends World {
         }
     }
 
+    public void playEventServer(EntityPlayer player, int type, BlockPos pos, int data) {
+        super.playEvent(player, type, pos, data);
+    }
+
     @Override
     public void playEvent(EntityPlayer player, int type, BlockPos pos, int data) {
         StructureWorld.transforming = this;
         super.playEvent(player, type, pos, data);
         StructureWorld.transforming = null;
+    }
+
+    @Override
+    public boolean isSideSolid(BlockPos pos, EnumFacing side, boolean _default) {
+        EntityChunk chunk = this.entity.getChunkForBlock(pos);
+        if (chunk == null || chunk.isEmpty()) {
+            return _default;
+        }
+        return this.entity.getBlockState(pos).isSideSolid(this, pos, side);
     }
 
     public List<IWorldEventListener> getListeners() {
@@ -496,5 +468,9 @@ public class StructureWorld extends World {
 
     public StructureEntity getEntity() {
         return this.entity;
+    }
+
+    public World getMainWorld() {
+        return this.fallback;
     }
 }

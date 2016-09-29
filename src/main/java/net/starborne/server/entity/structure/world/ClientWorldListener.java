@@ -2,7 +2,9 @@ package net.starborne.server.entity.structure.world;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
@@ -16,6 +18,14 @@ import net.minecraft.world.World;
 
 public class ClientWorldListener implements IWorldEventListener {
     private Minecraft mc = Minecraft.getMinecraft();
+
+    private final StructureWorld world;
+    private final WorldClientWrapper wrapper;
+
+    public ClientWorldListener(StructureWorld world) {
+        this.world = world;
+        this.wrapper = new WorldClientWrapper(world);
+    }
 
     @Override
     public void notifyBlockUpdate(World world, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
@@ -93,7 +103,11 @@ public class ClientWorldListener implements IWorldEventListener {
 
     @Override
     public void playEvent(EntityPlayer player, int type, BlockPos pos, int data) {
-        this.mc.renderGlobal.playEvent(player, type, pos, data);
+        RenderGlobal renderGlobal = this.mc.renderGlobal; //TODO Custom render global?
+        WorldClient previousWorld = renderGlobal.theWorld;
+        renderGlobal.theWorld = this.wrapper;
+        renderGlobal.playEvent(player, type, pos, data);
+        renderGlobal.theWorld = previousWorld;
     }
 
     @Override

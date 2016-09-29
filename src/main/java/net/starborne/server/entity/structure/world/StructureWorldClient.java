@@ -14,7 +14,7 @@ public class StructureWorldClient extends StructureWorld {
 
     public StructureWorldClient(StructureEntity entity) {
         super(entity);
-        this.addEventListener(new ClientWorldListener());
+        this.addEventListener(new ClientWorldListener(this));
     }
 
     @Override
