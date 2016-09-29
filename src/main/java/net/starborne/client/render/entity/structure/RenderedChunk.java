@@ -24,7 +24,9 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class RenderedChunk {
     private static final Minecraft MC = Minecraft.getMinecraft();
@@ -39,6 +41,9 @@ public class RenderedChunk {
     private final Map<TileEntity, TileEntitySpecialRenderer<TileEntity>> specialRenderers = new HashMap<>();
     private final ArrayDeque<TileEntity> specialRendererQueue = new ArrayDeque<>();
     private final ArrayDeque<TileEntity> specialRendererRemoveQueue = new ArrayDeque<>();
+
+    private Set<BlockRenderLayer> rebuild = new HashSet<>();
+    private static final Object REBUILD_LOCK = new Object();
 
     public RenderedChunk(StructureEntity entity, EntityChunk chunk) {
         this.entity = entity;
@@ -79,6 +84,16 @@ public class RenderedChunk {
     }
 
     public void render(float partialTicks) {
+        if (this.rebuild.size() > 0) {
+            BlockRenderLayer rebuildLayer = null;
+            synchronized (REBUILD_LOCK) {
+                for (BlockRenderLayer layer : this.rebuild) {
+                    rebuildLayer = layer;
+                    break;
+                }
+            }
+            this.rebuildLayerInternal(rebuildLayer);
+        }
         for (BlockRenderLayer renderLayer : BlockRenderLayer.values()) {
             this.renderLayer(renderLayer);
         }
@@ -109,17 +124,25 @@ public class RenderedChunk {
     }
 
     public void rebuildLayer(BlockRenderLayer layer) {
-        int index = layer.ordinal();
-        VertexBuffer buffer = this.buffers[index];
-        if (buffer != null) {
-            buffer.deleteGlBuffers();
+        if (!this.rebuild.contains(layer)) {
+            synchronized (REBUILD_LOCK) {
+                this.rebuild.add(layer);
+            }
         }
-        buffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+    }
+
+    private void rebuildLayerInternal(BlockRenderLayer layer) {
+        int index = layer.ordinal();
+        VertexBuffer buffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
         buffer.bindBuffer();
         this.bindAttributes();
         this.drawLayer(layer, buffer);
         buffer.unbindBuffer();
+        VertexBuffer prevBuffer = this.buffers[index];
         this.buffers[index] = buffer;
+        if (prevBuffer != null) {
+            prevBuffer.deleteGlBuffers();
+        }
     }
 
     private void bindAttributes() {
@@ -172,8 +195,11 @@ public class RenderedChunk {
     }
 
     public void rebuild() {
+        synchronized (REBUILD_LOCK) {
+            this.rebuild.clear();
+        }
         for (BlockRenderLayer layer : BlockRenderLayer.values()) {
-            this.rebuildLayer(layer);
+            this.rebuildLayerInternal(layer);
         }
     }
 

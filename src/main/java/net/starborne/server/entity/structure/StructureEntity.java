@@ -1,6 +1,5 @@
 package net.starborne.server.entity.structure;
 
-import net.minecraft.block.BlockLever;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -63,26 +62,6 @@ public class StructureEntity extends Entity implements IBlockAccess {
 
         if (!this.worldObj.isRemote) {
             this.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
-            this.setBlockState(new BlockPos(0, 1, 0), Blocks.DIAMOND_BLOCK.getDefaultState());
-
-            this.setBlockState(new BlockPos(0, 2, 0), Blocks.GRASS.getDefaultState());
-            this.setBlockState(new BlockPos(1, 2, 0), Blocks.GRASS.getDefaultState());
-            this.setBlockState(new BlockPos(-1, 2, 0), Blocks.GRASS.getDefaultState());
-            this.setBlockState(new BlockPos(0, 2, 1), Blocks.GRASS.getDefaultState());
-            this.setBlockState(new BlockPos(0, 2, -1), Blocks.GRASS.getDefaultState());
-
-            this.setBlockState(new BlockPos(1, 3, 0), Blocks.LEVER.getDefaultState().withProperty(BlockLever.FACING, BlockLever.EnumOrientation.UP_X));
-            this.setBlockState(new BlockPos(-1, 3, 0), Blocks.TORCH.getDefaultState());
-            this.setBlockState(new BlockPos(0, 3, 1), Blocks.LEVER.getDefaultState().withProperty(BlockLever.FACING, BlockLever.EnumOrientation.UP_X));
-            this.setBlockState(new BlockPos(0, 3, -1), Blocks.TORCH.getDefaultState());
-
-            this.setBlockState(new BlockPos(0, 3, 0), Blocks.ENCHANTING_TABLE.getDefaultState());
-
-            this.setBlockState(new BlockPos(1, 1, 0), Blocks.FLOWING_WATER.getDefaultState());
-            this.setBlockState(new BlockPos(0, 1, 1), Blocks.FLOWING_LAVA.getDefaultState());
-
-            this.setBlockState(new BlockPos(-1, 1, 0), Blocks.ICE.getDefaultState());
-            this.setBlockState(new BlockPos(0, 1, -1), Blocks.CHEST.getDefaultState());
 
             while (this.queuedChunks.size() > 0) {
                 ChunkQueue queue = this.queuedChunks.poll();

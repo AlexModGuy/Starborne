@@ -9,6 +9,7 @@ import java.util.Map;
 @IFMLLoadingPlugin.SortingIndex(1002)
 @IFMLLoadingPlugin.TransformerExclusions("net.ilexiconn.llibrary.server.asm")
 public class StarbornePlugin implements IFMLLoadingPlugin {
+    public static boolean loaded;
     public static boolean development;
 
     @Override
@@ -28,6 +29,7 @@ public class StarbornePlugin implements IFMLLoadingPlugin {
 
     @Override
     public void injectData(Map<String, Object> data) {
+        StarbornePlugin.loaded = true;
         StarbornePlugin.development = !(Boolean) data.get("runtimeDeobfuscationEnabled");
     }
 

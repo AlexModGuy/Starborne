@@ -93,9 +93,19 @@ public class ClientWorldListener implements IWorldEventListener {
 
     @Override
     public void playEvent(EntityPlayer player, int type, BlockPos pos, int data) {
+        this.mc.renderGlobal.playEvent(player, type, pos, data);
     }
 
     @Override
     public void sendBlockBreakProgress(int breakerId, BlockPos pos, int progress) {
+    }
+
+    public static ClientWorldListener get(StructureWorld world) {
+        for (IWorldEventListener listener : world.getListeners()) {
+            if (listener instanceof ClientWorldListener) {
+                return (ClientWorldListener) listener;
+            }
+        }
+        return null;
     }
 }

@@ -1,10 +1,14 @@
 package net.starborne.client;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -15,6 +19,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.starborne.Starborne;
 import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.message.BreakBlockEntityMessage;
 import net.starborne.server.message.InteractBlockEntityMessage;
 
 import java.util.HashMap;
@@ -25,10 +30,15 @@ public class ClientEventHandler {
 
     public static Map.Entry<StructureEntity, RayTraceResult> mouseOver;
 
+    private int interactCooldown;
+
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (MINECRAFT.thePlayer != null) {
             mouseOver = this.getSelectedBlock(MINECRAFT.thePlayer);
+        }
+        if (this.interactCooldown > 0) {
+            this.interactCooldown--;
         }
     }
 
@@ -42,8 +52,27 @@ public class ClientEventHandler {
         this.interactStructure(event.getEntityPlayer(), event.getHand());
     }
 
+    @SubscribeEvent
+    public void onClickAir(PlayerInteractEvent.LeftClickEmpty event) {
+        EntityPlayer player = event.getEntityPlayer();
+        EnumHand hand = event.getHand();
+        if (mouseOver != null && this.interactCooldown <= 0) {
+            this.interactCooldown = 5;
+            StructureEntity structure = mouseOver.getKey();
+            RayTraceResult result = mouseOver.getValue();
+            BlockPos pos = result.getBlockPos();
+            IBlockState state = structure.getBlockState(pos);
+            if (player.capabilities.isCreativeMode) {
+                structure.structureWorld.playEvent(2001, pos, Block.getStateId(state));
+                structure.setBlockState(pos, Blocks.AIR.getDefaultState());
+                Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(structure.getEntityId(), pos));
+            }
+        }
+    }
+
     private void interactStructure(EntityPlayer player, EnumHand hand) {
-        if (mouseOver != null) {
+        if (mouseOver != null && this.interactCooldown <= 0) {
+            this.interactCooldown = 5;
             StructureEntity structure = mouseOver.getKey();
             RayTraceResult result = mouseOver.getValue();
             BlockPos pos = result.getBlockPos();
@@ -52,10 +81,20 @@ public class ClientEventHandler {
             float hitX = (float) (hitVec.xCoord - pos.getX());
             float hitY = (float) (hitVec.yCoord - pos.getY());
             float hitZ = (float) (hitVec.zCoord - pos.getZ());
-            if (state.getBlock().onBlockActivated(structure.structureWorld, pos, state, player, hand, player.getHeldItem(hand), result.sideHit, hitX, hitY, hitZ)) {
-                player.swingArm(hand);
-            }
+            ItemStack heldItem = player.getHeldItem(hand);
             Starborne.networkWrapper.sendToServer(new InteractBlockEntityMessage(structure.getEntityId(), pos, result.sideHit, hitX, hitY, hitZ, hand));
+            if (state.getBlock().onBlockActivated(structure.structureWorld, pos, state, player, hand, heldItem, result.sideHit, hitX, hitY, hitZ)) {
+                player.swingArm(hand);
+            } else if (heldItem != null) {
+                int size = heldItem.stackSize;
+                EnumActionResult actionResult = heldItem.onItemUse(player, structure.structureWorld, pos, hand, result.sideHit, hitX, hitY, hitZ);
+                if (actionResult == EnumActionResult.SUCCESS) {
+                    player.swingArm(hand);
+                }
+                if (player.capabilities.isCreativeMode && heldItem.stackSize < size) {
+                    heldItem.stackSize = size;
+                }
+            }
         }
     }
 

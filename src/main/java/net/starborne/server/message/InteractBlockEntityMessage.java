@@ -6,6 +6,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -46,7 +47,16 @@ public class InteractBlockEntityMessage extends AbstractMessage<InteractBlockEnt
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
             IBlockState state = structureEntity.getBlockState(message.position);
-            state.getBlock().onBlockActivated(structureEntity.structureWorld, message.position, state, player, message.hand, player.getHeldItem(message.hand), message.side, message.hitX, message.hitY, message.hitZ);
+            ItemStack heldItem = player.getHeldItem(message.hand);
+            if (!state.getBlock().onBlockActivated(structureEntity.structureWorld, message.position, state, player, message.hand, heldItem, message.side, message.hitX, message.hitY, message.hitZ)) {
+                if (heldItem != null) {
+                    int size = heldItem.stackSize;
+                    heldItem.onItemUse(player, structureEntity.structureWorld, message.position, message.hand, message.side, message.hitX, message.hitY, message.hitZ);
+                    if (player.capabilities.isCreativeMode && heldItem.stackSize < size) {
+                        heldItem.stackSize = size;
+                    }
+                }
+            }
         }
     }
 

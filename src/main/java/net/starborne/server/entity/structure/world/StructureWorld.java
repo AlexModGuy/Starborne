@@ -23,6 +23,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.EnumSkyBlock;
+import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.MinecraftException;
 import net.minecraft.world.NextTickListEntry;
 import net.minecraft.world.World;
@@ -49,6 +50,8 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 public class StructureWorld extends World {
+    public static StructureWorld transforming;
+
     protected StructureEntity entity;
     protected World fallback;
 
@@ -478,5 +481,20 @@ public class StructureWorld extends World {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public void playEvent(EntityPlayer player, int type, BlockPos pos, int data) {
+        StructureWorld.transforming = this;
+        super.playEvent(player, type, pos, data);
+        StructureWorld.transforming = null;
+    }
+
+    public List<IWorldEventListener> getListeners() {
+        return this.eventListeners;
+    }
+
+    public StructureEntity getEntity() {
+        return this.entity;
     }
 }
