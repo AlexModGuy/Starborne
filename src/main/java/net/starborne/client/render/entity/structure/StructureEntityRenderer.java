@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
@@ -34,22 +35,36 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, 1.0F, 0.0F, 0.0F);
         GlStateManager.rotate(entity.rotationRoll, 0.0F, 0.0F, 1.0F);
         GlStateManager.disableLighting();
-        for (Map.Entry<BlockPos, EntityChunk> entry : entity.getChunks().entrySet()) {
-            EntityChunk chunk = entry.getValue();
-            if (!chunk.isEmpty()) {
-                BlockPos chunkPosition = chunk.getPosition();
-                int chunkX = chunkPosition.getX() << 4;
-                int chunkY = chunkPosition.getY() << 4;
-                int chunkZ = chunkPosition.getZ() << 4;
-                if (chunk instanceof ClientEntityChunk) {
-                    ClientEntityChunk clientChunk = (ClientEntityChunk) chunk;
-                    GlStateManager.pushMatrix();
-                    GlStateManager.translate(chunkX - 0.5, chunkY, chunkZ - 0.5);
-                    clientChunk.getRenderedChunk().render(partialTicks);
-                    GlStateManager.popMatrix();
+        for (BlockRenderLayer layer : BlockRenderLayer.values()) {
+            for (Map.Entry<BlockPos, EntityChunk> entry : entity.getChunks().entrySet()) {
+                EntityChunk chunk = entry.getValue();
+                if (!chunk.isEmpty()) {
+                    BlockPos chunkPosition = chunk.getPosition();
+                    int chunkX = chunkPosition.getX() << 4;
+                    int chunkY = chunkPosition.getY() << 4;
+                    int chunkZ = chunkPosition.getZ() << 4;
+                    if (chunk instanceof ClientEntityChunk) {
+                        ClientEntityChunk clientChunk = (ClientEntityChunk) chunk;
+                        GlStateManager.pushMatrix();
+                        GlStateManager.translate(chunkX - 0.5, chunkY, chunkZ - 0.5);
+                        clientChunk.getRenderedChunk().renderLayer(layer);
+                        GlStateManager.popMatrix();
+                    }
                 }
             }
         }
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(-0.5, 0.0, -0.5);
+        for (Map.Entry<BlockPos, EntityChunk> entry : entity.getChunks().entrySet()) {
+            EntityChunk chunk = entry.getValue();
+            if (!chunk.isEmpty()) {
+                if (chunk instanceof ClientEntityChunk) {
+                    ClientEntityChunk clientChunk = (ClientEntityChunk) chunk;
+                    clientChunk.getRenderedChunk().render(partialTicks);
+                }
+            }
+        }
+        GlStateManager.popMatrix();
         GlStateManager.enableLighting();
         Map.Entry<StructureEntity, RayTraceResult> mouseOver = ClientEventHandler.mouseOver;
         if (mouseOver != null && mouseOver.getKey() == entity) {
@@ -63,7 +78,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
             GlStateManager.depthMask(false);
             IBlockState state = entity.getBlockState(pos);
             if (state.getMaterial() != Material.AIR) {
-                RenderGlobal.func_189697_a(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.0020000000949949026D), 0.0F, 0.0F, 0.0F, 0.4F);
+                RenderGlobal.drawSelectionBoundingBox(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.002), 0.0F, 0.0F, 0.0F, 0.4F);
             }
             GlStateManager.depthMask(true);
             GlStateManager.enableTexture2D();

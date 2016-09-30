@@ -83,6 +83,9 @@ public class EntityChunk {
         } else if (previousBlock.hasTileEntity(state)) {
             this.removeTileEntity(position);
         }
+        if (!this.structureWorld.isRemote && previousBlock != block && !(block.hasTileEntity(state) || this.loading)) {
+            block.onBlockAdded(this.structureWorld, position.add(this.position.getX() << 4, this.position.getY() << 4, this.position.getZ() << 4), state);
+        }
         return previousState != state;
     }
 
@@ -184,8 +187,8 @@ public class EntityChunk {
             if (this.tickedBlockCount > 0) {
                 int tickSpeed = this.mainWorld.getGameRules().getInt("randomTickSpeed");
                 for (int i = 0; i < tickSpeed; i++) {
-                    this.updatePosition = this.updatePosition * 3 + 0x3C6EF35F;
-                    int position = this.updatePosition >> 2;
+                    this.updatePosition = this.updatePosition * 3 + 0x3C6EF35;
+                    int position = this.updatePosition;
                     int x = position & 15;
                     int y = position >> 8 & 15;
                     int z = position >> 16 & 15;

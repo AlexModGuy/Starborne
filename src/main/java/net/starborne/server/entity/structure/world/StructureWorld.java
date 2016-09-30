@@ -25,6 +25,7 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.NextTickListEntry;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.structure.StructureBoundingBox;
 import net.minecraftforge.fml.relauncher.Side;
@@ -69,7 +70,23 @@ public class StructureWorld extends World {
 
     @Override
     public boolean setBlockState(BlockPos pos, IBlockState newState, int flags) {
-        return this.entity.setBlockState(pos, newState);
+        IBlockState oldState = this.getBlockState(pos);
+        boolean success = this.entity.setBlockState(pos, newState);
+        this.markAndNotifyBlock(pos, null, oldState, newState, flags);
+        return success;
+    }
+
+    @Override
+    public void markAndNotifyBlock(BlockPos pos, Chunk chunk, IBlockState oldState, IBlockState newState, int flags) {
+        if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && this.entity.getChunkForBlock(pos) == null) {
+            this.notifyBlockUpdate(pos, oldState, newState, flags);
+        }
+        if (!this.isRemote && (flags & 1) != 0) {
+            this.notifyNeighborsRespectDebug(pos, oldState.getBlock());
+            if (newState.hasComparatorInputOverride()) {
+                this.updateComparatorOutputLevel(pos, newState.getBlock());
+            }
+        }
     }
 
     @Override

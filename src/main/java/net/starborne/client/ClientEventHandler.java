@@ -112,6 +112,9 @@ public class ClientEventHandler {
                 }
                 ItemStack output = result.getResult();
                 if (output != heldItem || output.stackSize != prevSize) {
+                    if (player.capabilities.isCreativeMode && output.stackSize < prevSize) {
+                        output.stackSize = prevSize;
+                    }
                     player.setHeldItem(hand, output);
                     if (output.stackSize <= 0) {
                         player.setHeldItem(hand, null);

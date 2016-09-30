@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class RenderedChunk {
     private static final Minecraft MC = Minecraft.getMinecraft();
@@ -43,7 +45,8 @@ public class RenderedChunk {
     private final ArrayDeque<TileEntity> specialRendererRemoveQueue = new ArrayDeque<>();
 
     private Set<BlockRenderLayer> rebuild = new HashSet<>();
-    private static final Object REBUILD_LOCK = new Object();
+    private final Object rebuildLock = new Object();
+    private final Lock[] renderLayerLocks = new Lock[this.buffers.length];
 
     public RenderedChunk(StructureEntity entity, EntityChunk chunk) {
         this.entity = entity;
@@ -54,6 +57,9 @@ public class RenderedChunk {
         this.setBuilder(BlockRenderLayer.TRANSLUCENT, 0x4000);
         for (BlockRenderLayer layer : BlockRenderLayer.values()) {
             this.rebuildLayer(layer);
+        }
+        for (int i = 0; i < this.renderLayerLocks.length; i++) {
+            this.renderLayerLocks[i] = new ReentrantLock();
         }
     }
 
@@ -81,27 +87,22 @@ public class RenderedChunk {
             TileEntity tile = this.specialRendererRemoveQueue.poll();
             this.specialRenderers.remove(tile);
         }
+        while (this.rebuild.size() > 0) {
+            synchronized (this.rebuildLock) {
+                for (BlockRenderLayer layer : this.rebuild) {
+                    this.rebuildLayerInternal(layer);
+                }
+                this.rebuild.clear();
+            }
+        }
     }
 
     public void render(float partialTicks) {
-        if (this.rebuild.size() > 0) {
-            BlockRenderLayer rebuildLayer = null;
-            synchronized (REBUILD_LOCK) {
-                for (BlockRenderLayer layer : this.rebuild) {
-                    rebuildLayer = layer;
-                    break;
-                }
-            }
-            this.rebuildLayerInternal(rebuildLayer);
-        }
-        for (BlockRenderLayer renderLayer : BlockRenderLayer.values()) {
-            this.renderLayer(renderLayer);
-        }
         for (Map.Entry<TileEntity, TileEntitySpecialRenderer<TileEntity>> renderer : this.specialRenderers.entrySet()) {
             TileEntity tile = renderer.getKey();
             TileEntitySpecialRenderer<TileEntity> value = renderer.getValue();
             BlockPos position = tile.getPos();
-            value.renderTileEntityAt(tile, position.getX() & 15, position.getY() & 15, position.getZ() & 15, partialTicks, -1);
+            value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, -1);
             TEXTURE_MANAGER.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
         }
     }
@@ -110,14 +111,17 @@ public class RenderedChunk {
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.enableBlend();
         }
+        Lock lock = this.renderLayerLocks[layer.ordinal()];
+        lock.lock();
         this.enableState();
         VertexBuffer buffer = this.buffers[layer.ordinal()];
         buffer.bindBuffer();
         this.bindAttributes();
         buffer.drawArrays(GL11.GL_QUADS);
         buffer.unbindBuffer();
-        GlStateManager.resetColor();
         this.disableState();
+        lock.unlock();
+        GlStateManager.resetColor();
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.disableBlend();
         }
@@ -125,8 +129,18 @@ public class RenderedChunk {
 
     public void rebuildLayer(BlockRenderLayer layer) {
         if (!this.rebuild.contains(layer)) {
-            synchronized (REBUILD_LOCK) {
+            synchronized (this.rebuildLock) {
                 this.rebuild.add(layer);
+            }
+        }
+    }
+
+    public void rebuild() {
+        synchronized (this.rebuildLock) {
+            for (BlockRenderLayer layer : BlockRenderLayer.values()) {
+                if (!this.rebuild.contains(layer)) {
+                    this.rebuild.add(layer);
+                }
             }
         }
     }
@@ -134,12 +148,15 @@ public class RenderedChunk {
     private void rebuildLayerInternal(BlockRenderLayer layer) {
         int index = layer.ordinal();
         VertexBuffer buffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+        VertexBuffer prevBuffer = this.buffers[index];
+        Lock lock = this.renderLayerLocks[layer.ordinal()];
+        lock.lock();
         buffer.bindBuffer();
         this.bindAttributes();
         this.drawLayer(layer, buffer);
         buffer.unbindBuffer();
-        VertexBuffer prevBuffer = this.buffers[index];
         this.buffers[index] = buffer;
+        lock.unlock();
         if (prevBuffer != null) {
             prevBuffer.deleteGlBuffers();
         }
@@ -172,17 +189,19 @@ public class RenderedChunk {
                         if (renderType != EnumBlockRenderType.INVISIBLE) {
                             position.setPos(blockX, blockY, blockZ);
                             globalPosition.setPos(offsetX + blockX, offsetY + blockY, offsetZ + blockZ);
-                            state = state.getActualState(this.entity, globalPosition);
+                            state = state.getActualState(this.entity.structureWorld, globalPosition);
                             switch (renderType) {
                                 case MODEL:
                                     IBakedModel model = BLOCK_RENDERER_DISPATCHER.getModelForState(state);
-                                    state = state.getBlock().getExtendedState(state, this.entity, position);
-                                    BLOCK_MODEL_RENDERER.renderModel(this.entity, model, state, position, builder, true);
+                                    state = state.getBlock().getExtendedState(state, this.entity.structureWorld, position);
+                                    BLOCK_MODEL_RENDERER.renderModel(this.entity.structureWorld, model, state, position, builder, true);
                                     break;
                                 case ENTITYBLOCK_ANIMATED:
                                     break;
                                 case LIQUID:
-                                    BLOCK_RENDERER_DISPATCHER.fluidRenderer.renderFluid(this.entity, state, position, builder);
+                                    builder.setTranslation(position.getX() - globalPosition.getX(), position.getY() - globalPosition.getY(), position.getZ() - globalPosition.getZ());
+                                    BLOCK_RENDERER_DISPATCHER.fluidRenderer.renderFluid(this.entity.structureWorld, state, globalPosition, builder);
+                                    builder.setTranslation(0, 0, 0);
                                     break;
                             }
                         }
@@ -197,15 +216,6 @@ public class RenderedChunk {
     public void delete() {
         for (VertexBuffer buffer : this.buffers) {
             buffer.deleteGlBuffers();
-        }
-    }
-
-    public void rebuild() {
-        synchronized (REBUILD_LOCK) {
-            this.rebuild.clear();
-        }
-        for (BlockRenderLayer layer : BlockRenderLayer.values()) {
-            this.rebuildLayerInternal(layer);
         }
     }
 

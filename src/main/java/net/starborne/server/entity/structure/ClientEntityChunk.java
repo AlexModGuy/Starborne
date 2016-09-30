@@ -3,8 +3,8 @@ package net.starborne.server.entity.structure;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import net.starborne.client.render.entity.structure.RenderedChunk;
 
 public class ClientEntityChunk extends EntityChunk {
@@ -17,19 +17,28 @@ public class ClientEntityChunk extends EntityChunk {
 
     @Override
     public boolean setBlockState(int x, int y, int z, IBlockState state) {
-        if (super.setBlockState(x, y, z, state)) {
-            if (!this.loading) {
-                this.renderedChunk.rebuildLayer(state.getBlock().getBlockLayer());
-            }
-            return true;
+        boolean placed = super.setBlockState(x, y, z, state);
+        if (!this.loading) {
+            this.renderedChunk.rebuild();
+            this.rebuildNeighbours();
         }
-        return false;
+        return placed;
+    }
+
+    private void rebuildNeighbours() {
+        for (EnumFacing facing : EnumFacing.values()) {
+            EntityChunk chunk = this.entity.getChunk(this.position.offset(facing));
+            if (chunk instanceof ClientEntityChunk && !chunk.isEmpty()) {
+                ((ClientEntityChunk) chunk).rebuild();
+            }
+        }
     }
 
     @Override
     public void deserialize(NBTTagCompound compound) {
         super.deserialize(compound);
         this.renderedChunk.rebuild();
+        this.rebuildNeighbours();
     }
 
     @Override
@@ -54,6 +63,10 @@ public class ClientEntityChunk extends EntityChunk {
     protected void removeTileEntity(BlockPos position) {
         this.renderedChunk.removeTileEntity(this.getTileEntity(position));
         super.removeTileEntity(position);
+    }
+
+    public void rebuild() {
+        this.renderedChunk.rebuild();
     }
 
     public RenderedChunk getRenderedChunk() {

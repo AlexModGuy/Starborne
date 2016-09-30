@@ -295,6 +295,18 @@ public class StructureEntity extends Entity implements IBlockAccess {
         return this.chunks.get(this.getChunkPosition(pos));
     }
 
+    public EntityChunk getChunk(BlockPos pos) {
+        return this.chunks.get(pos);
+    }
+
+    private void rebuild() {
+        for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
+            if (entry.getValue() instanceof ClientEntityChunk) {
+                ((ClientEntityChunk) entry.getValue()).rebuild();
+            }
+        }
+    }
+
     private class ChunkQueue {
         private boolean remove;
         private BlockPos position;
