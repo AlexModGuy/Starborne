@@ -8,6 +8,9 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.EnumSkyBlock;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import net.starborne.server.entity.structure.StructureEntity;
 
 import javax.vecmath.Point3d;
@@ -52,6 +55,12 @@ public class StructureWorldClient extends StructureWorld {
         if (this.mc.getRenderViewEntity() == player) {
             this.playSound(x, y, z, sound, category, volume, pitch, false);
         }
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public int getLightFromNeighborsFor(EnumSkyBlock type, BlockPos pos) {
+        return 15;
     }
 
     public void runDisplayTicks(int posX, int posY, int posZ) {

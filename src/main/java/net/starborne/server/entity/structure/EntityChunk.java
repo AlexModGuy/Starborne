@@ -8,10 +8,8 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.BlockStateContainer;
-import net.minecraft.world.chunk.NibbleArray;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.util.Constants;
 
@@ -39,17 +37,12 @@ public class EntityChunk {
 
     protected boolean loading;
 
-    protected NibbleArray lightmap;
-    protected NibbleArray skylight;
-
     public EntityChunk(StructureEntity entity, BlockPos position) {
         this.entity = entity;
         this.mainWorld = entity.worldObj;
         this.structureWorld = entity.structureWorld;
         this.position = position;
         this.stateData = new BlockStateContainer();
-        this.lightmap = new NibbleArray();
-        this.skylight = new NibbleArray();
     }
 
     public IBlockState getBlockState(BlockPos position) {
@@ -65,6 +58,10 @@ public class EntityChunk {
     }
 
     public boolean setBlockState(int x, int y, int z, IBlockState state) {
+        return this.setBlockState(x, y, z, state, 3);
+    }
+
+    public boolean setBlockState(int x, int y, int z, IBlockState state, int flags) {
         if (state instanceof IExtendedBlockState) {
             state = ((IExtendedBlockState) state).getClean();
         }
@@ -90,12 +87,11 @@ public class EntityChunk {
         } else if (previousBlock.hasTileEntity(state)) {
             this.removeTileEntity(position);
         }
+        BlockPos globalPosition = position.add(this.position.getX() << 4, this.position.getY() << 4, this.position.getZ() << 4);
         if (!this.structureWorld.isRemote && previousBlock != block && !(block.hasTileEntity(state) || this.loading)) {
-            block.onBlockAdded(this.structureWorld, position.add(this.position.getX() << 4, this.position.getY() << 4, this.position.getZ() << 4), state);
+            block.onBlockAdded(this.structureWorld, globalPosition, state);
         }
-        if (state.getLightValue(this.structureWorld, position) > 0) {
-            this.structureWorld.checkLight(position);
-        }
+        this.structureWorld.markAndNotifyBlock(globalPosition, null, previousState, state, flags);
         return previousState != state;
     }
 
@@ -134,12 +130,31 @@ public class EntityChunk {
     }
 
     public void serialize(NBTTagCompound compound) {
+        EntityChunk.serializeData(compound, this.stateData);
+    }
+
+    public void deserialize(NBTTagCompound compound) {
+        this.loading = true;
+        this.blockCount = 0;
+        this.tickedBlockCount = 0;
+        BlockStateContainer data = EntityChunk.deserializeData(compound);
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                for (int z = 0; z < 16; z++) {
+                    this.setBlockState(x, y, z, data.get(x, y, z));
+                }
+            }
+        }
+        this.loading = false;
+    }
+
+    public static void serializeData(NBTTagCompound compound, BlockStateContainer data) {
         List<SaveEntry> entries = new ArrayList<>();
         for (int z = 0; z < 16; z++) {
             for (int y = 0; y < 16; y++) {
                 for (int x = 0; x < 16; x++) {
                     SaveEntry previousEntry = entries.size() > 0 ? entries.get(entries.size() - 1) : null;
-                    IBlockState state = this.getBlockState(x, y, z);
+                    IBlockState state = data.get(x, y, z);
                     if (previousEntry == null || previousEntry.state != state) {
                         entries.add(new SaveEntry(state));
                     } else {
@@ -160,10 +175,8 @@ public class EntityChunk {
         compound.setTag("Blocks", blocksList);
     }
 
-    public void deserialize(NBTTagCompound compound) {
-        this.loading = true;
-        this.blockCount = 0;
-        this.tickedBlockCount = 0;
+    public static BlockStateContainer deserializeData(NBTTagCompound compound) {
+        BlockStateContainer data = new BlockStateContainer();
         NBTTagList blocks = compound.getTagList("Blocks", Constants.NBT.TAG_COMPOUND);
         int blockX = 0;
         int blockY = 0;
@@ -174,7 +187,7 @@ public class EntityChunk {
             int id = entryTag.getInteger("I");
             IBlockState state = Block.getStateById(id);
             for (int repeat = 0; repeat < repeats; repeat++) {
-                this.setBlockState(blockX, blockY, blockZ, state);
+                data.set(blockX, blockY, blockZ, state);
                 blockX++;
                 if (blockX >= 16) {
                     blockX = 0;
@@ -186,7 +199,7 @@ public class EntityChunk {
                 }
             }
         }
-        this.loading = false;
+        return data;
     }
 
     public void unload() {
@@ -197,8 +210,7 @@ public class EntityChunk {
             if (this.tickedBlockCount > 0) {
                 int tickSpeed = this.mainWorld.getGameRules().getInt("randomTickSpeed");
                 for (int i = 0; i < tickSpeed; i++) {
-                    this.updatePosition = this.updatePosition * 3 + 0x3C6EF35;
-                    int position = this.updatePosition;
+                    int position = this.updatePosition * 15 + 0x5FD8AC;
                     int x = position & 15;
                     int y = position >> 8 & 15;
                     int z = position >> 16 & 15;
@@ -232,40 +244,7 @@ public class EntityChunk {
         }
     }
 
-    public void setLightFor(EnumSkyBlock type, BlockPos pos, int lightValue) {
-        if (type == EnumSkyBlock.BLOCK) {
-            this.lightmap.set(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15, lightValue);
-        } else {
-            this.skylight.set(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15, lightValue);
-        }
-    }
-
-    public int getLightFor(EnumSkyBlock type, BlockPos pos) {
-        if (type == EnumSkyBlock.BLOCK) {
-            return this.lightmap.get(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
-        } else {
-            return this.skylight.get(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
-        }
-    }
-
-    public int getLightSubtracted(BlockPos pos, int amount) {
-        int x = pos.getX() & 15;
-        int y = pos.getY() & 15;
-        int z = pos.getZ() & 15;
-        if (this.isEmpty()) {
-            return !this.structureWorld.provider.getHasNoSky() && amount < EnumSkyBlock.SKY.defaultLightValue ? EnumSkyBlock.SKY.defaultLightValue - amount : 0;
-        } else {
-            int skylight = this.structureWorld.provider.getHasNoSky() ? 0 : this.skylight.get(x, y, z);
-            skylight = skylight - amount;
-            int blocklight = this.lightmap.get(x, y, z);
-            if (blocklight > skylight) {
-                skylight = blocklight;
-            }
-            return skylight;
-        }
-    }
-
-    protected class SaveEntry {
+    protected static class SaveEntry {
         protected int repeats;
         protected IBlockState state;
 

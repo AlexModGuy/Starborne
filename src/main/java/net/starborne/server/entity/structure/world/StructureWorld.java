@@ -74,10 +74,7 @@ public class StructureWorld extends World {
 
     @Override
     public boolean setBlockState(BlockPos pos, IBlockState newState, int flags) {
-        IBlockState oldState = this.getBlockState(pos);
-        boolean success = this.entity.setBlockState(pos, newState);
-        this.markAndNotifyBlock(pos, null, oldState, newState, flags);
-        return success;
+        return this.entity.setBlockState(pos, newState);
     }
 
     @Override
@@ -100,10 +97,6 @@ public class StructureWorld extends World {
 
     @Override
     public int getLight(BlockPos pos) {
-        EntityChunk chunk = this.entity.getChunkForBlock(pos);
-        if (chunk != null) {
-            return chunk.getLightSubtracted(pos, 0);
-        }
         return 15;
     }
 
@@ -114,40 +107,11 @@ public class StructureWorld extends World {
 
     @Override
     public int getLight(BlockPos pos, boolean checkNeighbors) {
-        if (checkNeighbors && this.getBlockState(pos).useNeighborBrightness()) {
-            int light = this.getLight(pos.up(), false);
-            int east = this.getLight(pos.east(), false);
-            int west = this.getLight(pos.west(), false);
-            int south = this.getLight(pos.south(), false);
-            int north = this.getLight(pos.north(), false);
-            if (east > light) {
-                light = east;
-            }
-            if (west > light) {
-                light = west;
-            }
-            if (south > light) {
-                light = south;
-            }
-            if (north > light) {
-                light = north;
-            }
-            return light;
-        } else {
-            EntityChunk chunk = this.entity.getChunkForBlock(pos);
-            if (chunk != null && !chunk.isEmpty()) {
-                return chunk.getLightSubtracted(pos, this.skylightSubtracted);
-            }
-        }
         return 15;
     }
 
     @Override
     public int getLightFor(EnumSkyBlock type, BlockPos pos) {
-        EntityChunk chunk = this.entity.getChunkForBlock(pos);
-        if (chunk != null && !chunk.isEmpty()) {
-            return chunk.getLightFor(type, pos);
-        }
         return 15;
     }
 
@@ -529,13 +493,6 @@ public class StructureWorld extends World {
         y = transformed.getY();
         z = transformed.getZ();
         super.playSound(player, x, y, z, sound, category, volume, pitch);
-    }
-
-    @Override
-    public void setLightFor(EnumSkyBlock type, BlockPos pos, int lightValue) {
-        EntityChunk chunk = this.entity.getChunkForBlock(pos);
-        chunk.setLightFor(type, pos, lightValue);
-        this.notifyLightSet(pos);
     }
 
     public List<IWorldEventListener> getListeners() {

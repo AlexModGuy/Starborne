@@ -102,6 +102,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
         for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
             entry.getValue().update();
         }
+
         this.rotationPitch += 0.1F;
         this.rotationYaw += 0.1F;
 
@@ -181,6 +182,9 @@ public class StructureEntity extends Entity implements IBlockAccess {
         this.queuedChunks.add(new ChunkQueue(position, chunk, false));
         if (previous != null) {
             previous.unload();
+            for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+                entry.getValue().remove(previous);
+            }
         }
     }
 
