@@ -112,7 +112,7 @@ public class RenderedChunk {
             GlStateManager.enableBlend();
         }
         Lock lock = this.renderLayerLocks[layer.ordinal()];
-        lock.lock();
+//        lock.lock();
         this.enableState();
         VertexBuffer buffer = this.buffers[layer.ordinal()];
         buffer.bindBuffer();
@@ -120,7 +120,7 @@ public class RenderedChunk {
         buffer.drawArrays(GL11.GL_QUADS);
         buffer.unbindBuffer();
         this.disableState();
-        lock.unlock();
+//        lock.unlock();
         GlStateManager.resetColor();
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.disableBlend();
@@ -150,13 +150,13 @@ public class RenderedChunk {
         VertexBuffer buffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
         VertexBuffer prevBuffer = this.buffers[index];
         Lock lock = this.renderLayerLocks[layer.ordinal()];
-        lock.lock();
+//        lock.lock();
         buffer.bindBuffer();
         this.bindAttributes();
         this.drawLayer(layer, buffer);
         buffer.unbindBuffer();
         this.buffers[index] = buffer;
-        lock.unlock();
+//        lock.unlock();
         if (prevBuffer != null) {
             prevBuffer.deleteGlBuffers();
         }

@@ -2,6 +2,7 @@ package net.starborne.server.core;
 
 import net.minecraft.client.particle.Particle;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import net.starborne.server.entity.structure.world.StructureWorld;
 
 import javax.vecmath.Point3d;
@@ -20,5 +21,12 @@ public class StarborneHooks {
             particle.motionY = transformedVelocity.yCoord;
             particle.motionZ = transformedVelocity.zCoord;
         }
+    }
+
+    public static World getRealWorld(World world) {
+        if (world instanceof StructureWorld) {
+            return ((StructureWorld) world).getMainWorld();
+        }
+        return world;
     }
 }

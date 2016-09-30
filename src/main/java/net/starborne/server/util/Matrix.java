@@ -2,6 +2,7 @@ package net.starborne.server.util;
 
 import com.google.common.base.Preconditions;
 import net.ilexiconn.llibrary.client.util.StackUnderflowError;
+import net.minecraft.util.math.Vec3d;
 
 import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
@@ -124,6 +125,12 @@ public class Matrix {
     public void transform(Point3d point) {
         Matrix4d mat = this.matrixStack.peek();
         mat.transform(point);
+    }
+
+    public Vec3d transformPoint(Vec3d vec) {
+        Point3d point = new Point3d(vec.xCoord, vec.yCoord, vec.zCoord);
+        this.transform(point);
+        return new Vec3d(point.getX(), point.getY(), point.getZ());
     }
 
     public void transform(Vector3d point) {

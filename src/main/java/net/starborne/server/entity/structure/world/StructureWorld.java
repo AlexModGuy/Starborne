@@ -15,6 +15,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ReportedException;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -51,6 +53,8 @@ public class StructureWorld extends World {
     protected final Set<NextTickListEntry> scheduledTicksSet = Sets.newHashSet();
     protected final TreeSet<NextTickListEntry> scheduledTicksTree = new TreeSet<>();
     protected final List<NextTickListEntry> currentScheduledTicks = new ArrayList<>();
+
+    private int skylightSubtracted;
 
     public StructureWorld(StructureEntity entity) {
         super(new EntityWorldSaveHandler(), entity.worldObj.getWorldInfo(), entity.worldObj.provider, entity.worldObj.theProfiler, entity.worldObj.isRemote);
@@ -95,17 +99,55 @@ public class StructureWorld extends World {
     }
 
     @Override
-    public int getLight(BlockPos pos, boolean checkNeighbors) {
-        return 15; //TODO Lighting
+    public int getLight(BlockPos pos) {
+        EntityChunk chunk = this.entity.getChunkForBlock(pos);
+        if (chunk != null) {
+            return chunk.getLightSubtracted(pos, 0);
+        }
+        return 15;
     }
 
     @Override
-    public int getLight(BlockPos pos) {
+    public int getLightFromNeighbors(BlockPos pos) {
+        return this.getLight(pos, true);
+    }
+
+    @Override
+    public int getLight(BlockPos pos, boolean checkNeighbors) {
+        if (checkNeighbors && this.getBlockState(pos).useNeighborBrightness()) {
+            int light = this.getLight(pos.up(), false);
+            int east = this.getLight(pos.east(), false);
+            int west = this.getLight(pos.west(), false);
+            int south = this.getLight(pos.south(), false);
+            int north = this.getLight(pos.north(), false);
+            if (east > light) {
+                light = east;
+            }
+            if (west > light) {
+                light = west;
+            }
+            if (south > light) {
+                light = south;
+            }
+            if (north > light) {
+                light = north;
+            }
+            return light;
+        } else {
+            EntityChunk chunk = this.entity.getChunkForBlock(pos);
+            if (chunk != null && !chunk.isEmpty()) {
+                return chunk.getLightSubtracted(pos, this.skylightSubtracted);
+            }
+        }
         return 15;
     }
 
     @Override
     public int getLightFor(EnumSkyBlock type, BlockPos pos) {
+        EntityChunk chunk = this.entity.getChunkForBlock(pos);
+        if (chunk != null && !chunk.isEmpty()) {
+            return chunk.getLightFor(type, pos);
+        }
         return 15;
     }
 
@@ -169,6 +211,7 @@ public class StructureWorld extends World {
 
     @Override
     public boolean spawnEntityInWorld(Entity entity) {
+        entity.worldObj = this.fallback;
         Point3d transformedPosition = this.entity.getTransformedPosition(new Point3d(entity.posX, entity.posY, entity.posZ));
         entity.posX = transformedPosition.getX();
         entity.posY = transformedPosition.getY();
@@ -477,6 +520,22 @@ public class StructureWorld extends World {
             return _default;
         }
         return this.entity.getBlockState(pos).isSideSolid(this, pos, side);
+    }
+
+    @Override
+    public void playSound(EntityPlayer player, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(x, y, z));
+        x = transformed.getX();
+        y = transformed.getY();
+        z = transformed.getZ();
+        super.playSound(player, x, y, z, sound, category, volume, pitch);
+    }
+
+    @Override
+    public void setLightFor(EnumSkyBlock type, BlockPos pos, int lightValue) {
+        EntityChunk chunk = this.entity.getChunkForBlock(pos);
+        chunk.setLightFor(type, pos, lightValue);
+        this.notifyLightSet(pos);
     }
 
     public List<IWorldEventListener> getListeners() {

@@ -8,8 +8,10 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.BlockStateContainer;
+import net.minecraft.world.chunk.NibbleArray;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.util.Constants;
 
@@ -37,12 +39,17 @@ public class EntityChunk {
 
     protected boolean loading;
 
+    protected NibbleArray lightmap;
+    protected NibbleArray skylight;
+
     public EntityChunk(StructureEntity entity, BlockPos position) {
         this.entity = entity;
         this.mainWorld = entity.worldObj;
         this.structureWorld = entity.structureWorld;
         this.position = position;
         this.stateData = new BlockStateContainer();
+        this.lightmap = new NibbleArray();
+        this.skylight = new NibbleArray();
     }
 
     public IBlockState getBlockState(BlockPos position) {
@@ -85,6 +92,9 @@ public class EntityChunk {
         }
         if (!this.structureWorld.isRemote && previousBlock != block && !(block.hasTileEntity(state) || this.loading)) {
             block.onBlockAdded(this.structureWorld, position.add(this.position.getX() << 4, this.position.getY() << 4, this.position.getZ() << 4), state);
+        }
+        if (state.getLightValue(this.structureWorld, position) > 0) {
+            this.structureWorld.checkLight(position);
         }
         return previousState != state;
     }
@@ -219,6 +229,39 @@ public class EntityChunk {
         TileEntity tile = this.tileEntities.remove(position);
         if (tile instanceof ITickable) {
             this.tickables.remove(tile);
+        }
+    }
+
+    public void setLightFor(EnumSkyBlock type, BlockPos pos, int lightValue) {
+        if (type == EnumSkyBlock.BLOCK) {
+            this.lightmap.set(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15, lightValue);
+        } else {
+            this.skylight.set(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15, lightValue);
+        }
+    }
+
+    public int getLightFor(EnumSkyBlock type, BlockPos pos) {
+        if (type == EnumSkyBlock.BLOCK) {
+            return this.lightmap.get(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
+        } else {
+            return this.skylight.get(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
+        }
+    }
+
+    public int getLightSubtracted(BlockPos pos, int amount) {
+        int x = pos.getX() & 15;
+        int y = pos.getY() & 15;
+        int z = pos.getZ() & 15;
+        if (this.isEmpty()) {
+            return !this.structureWorld.provider.getHasNoSky() && amount < EnumSkyBlock.SKY.defaultLightValue ? EnumSkyBlock.SKY.defaultLightValue - amount : 0;
+        } else {
+            int skylight = this.structureWorld.provider.getHasNoSky() ? 0 : this.skylight.get(x, y, z);
+            skylight = skylight - amount;
+            int blocklight = this.lightmap.get(x, y, z);
+            if (blocklight > skylight) {
+                skylight = blocklight;
+            }
+            return skylight;
         }
     }
 

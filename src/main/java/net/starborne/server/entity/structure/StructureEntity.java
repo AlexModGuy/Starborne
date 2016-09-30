@@ -247,7 +247,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
             if (state.getBlock() == Blocks.AIR) {
                 return false;
             }
-            chunk = new EntityChunk(this, chunkPosition);
+            chunk = this.worldObj.isRemote ? new ClientEntityChunk(this, chunkPosition) : new EntityChunk(this, chunkPosition);
             this.setChunk(chunkPosition, chunk);
         }
         boolean success = chunk.setBlockState(this.getPositionInChunk(pos), state);

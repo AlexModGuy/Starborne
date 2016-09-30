@@ -2,7 +2,11 @@ package net.starborne.server.entity.structure.world;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
 import net.starborne.server.entity.structure.StructureEntity;
 
@@ -24,6 +28,29 @@ public class StructureWorldClient extends StructureWorld {
         if (player != null) {
             Point3d untransformedPosition = this.entity.getUntransformedPosition(new Point3d(player.posX, player.posY, player.posZ));
             this.runDisplayTicks((int) untransformedPosition.x, (int) untransformedPosition.y, (int) untransformedPosition.z);
+        }
+    }
+
+    @Override
+    public void playSound(double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, boolean distanceDelay) {
+        Point3d transformed = this.entity.getTransformedPosition(new Point3d(x, y, z));
+        x = transformed.getX();
+        y = transformed.getY();
+        z = transformed.getZ();
+        double distance = this.mc.getRenderViewEntity().getDistanceSq(x, y, z);
+        PositionedSoundRecord positionedSound = new PositionedSoundRecord(sound, category, volume, pitch, (float) x, (float) y, (float) z);
+        if (distanceDelay && distance > 100.0D) {
+            double delay = Math.sqrt(distance) / 40.0D;
+            this.mc.getSoundHandler().playDelayedSound(positionedSound, (int) (delay * 20.0D));
+        } else {
+            this.mc.getSoundHandler().playSound(positionedSound);
+        }
+    }
+
+    @Override
+    public void playSound(EntityPlayer player, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        if (this.mc.getRenderViewEntity() == player) {
+            this.playSound(x, y, z, sound, category, volume, pitch, false);
         }
     }
 
