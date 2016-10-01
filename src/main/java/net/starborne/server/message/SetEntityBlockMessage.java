@@ -32,7 +32,7 @@ public class SetEntityBlockMessage extends AbstractMessage<SetEntityBlockMessage
         Entity entity = client.theWorld.getEntityByID(message.entity);
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
-            structureEntity.setBlockState(message.position, message.state);
+            structureEntity.structureWorld.setBlockState(message.position, message.state);
         }
     }
 

@@ -11,6 +11,7 @@ import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
@@ -27,19 +28,27 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.NextTickListEntry;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldType;
+import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.structure.StructureBoundingBox;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.starborne.server.biome.BiomeHandler;
+import net.starborne.server.entity.structure.ClientEntityChunk;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.entity.structure.StructurePlayerHandler;
 import org.apache.logging.log4j.LogManager;
 
 import javax.vecmath.Point3d;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -53,6 +62,9 @@ public class StructureWorld extends World {
     protected final Set<NextTickListEntry> scheduledTicksSet = Sets.newHashSet();
     protected final TreeSet<NextTickListEntry> scheduledTicksTree = new TreeSet<>();
     protected final List<NextTickListEntry> currentScheduledTicks = new ArrayList<>();
+
+    protected Map<BlockPos, EntityChunk> chunks = new HashMap<>();
+    private ArrayDeque<ChunkQueue> queuedChunks = new ArrayDeque<>();
 
     private int skylightSubtracted;
 
@@ -74,12 +86,12 @@ public class StructureWorld extends World {
 
     @Override
     public boolean setBlockState(BlockPos pos, IBlockState newState, int flags) {
-        return this.entity.setBlockState(pos, newState);
+        return this.setBlockState(pos, newState);
     }
 
     @Override
     public void markAndNotifyBlock(BlockPos pos, Chunk chunk, IBlockState oldState, IBlockState newState, int flags) {
-        if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && this.entity.getChunkForBlock(pos) == null) {
+        if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && this.getChunkForBlock(pos) == null) {
             this.notifyBlockUpdate(pos, oldState, newState, flags);
         }
         if (!this.isRemote && (flags & 1) != 0) {
@@ -92,7 +104,11 @@ public class StructureWorld extends World {
 
     @Override
     public IBlockState getBlockState(BlockPos pos) {
-        return this.entity.getBlockState(pos);
+        EntityChunk chunk = this.getChunk(this.getChunkPosition(pos));
+        if (chunk != null) {
+            return chunk.getBlockState(this.getPositionInChunk(pos));
+        }
+        return Blocks.AIR.getDefaultState();
     }
 
     @Override
@@ -116,13 +132,33 @@ public class StructureWorld extends World {
     }
 
     @Override
+    public Biome getBiome(BlockPos pos) {
+        return BiomeHandler.SPACE;
+    }
+
+    @Override
+    public int getStrongPower(BlockPos pos, EnumFacing side) {
+        return this.getBlockState(pos).getStrongPower(this, pos, side);
+    }
+
+    @Override
+    public WorldType getWorldType() {
+        return WorldType.DEFAULT;
+    }
+
+    @Override
     public boolean isAirBlock(BlockPos pos) {
-        return this.entity.isAirBlock(pos);
+        IBlockState state = this.getBlockState(pos);
+        return state.getBlock().isAir(state, this, pos);
     }
 
     @Override
     public TileEntity getTileEntity(BlockPos pos) {
-        return this.entity.getTileEntity(pos);
+        EntityChunk chunk = this.getChunkForBlock(pos);
+        if (chunk != null && !chunk.isEmpty()) {
+            return chunk.getTileEntity(this.getPositionInChunk(pos));
+        }
+        return null;
     }
 
     @Override
@@ -262,6 +298,11 @@ public class StructureWorld extends World {
     public void tick() {
         super.tick();
         this.tickUpdates(false);
+        this.updateChunkQueue();
+        //TODO only update tracked chunks?
+        for (Map.Entry<BlockPos, EntityChunk> entry : this.chunks.entrySet()) {
+            entry.getValue().update();
+        }
     }
 
     @Override
@@ -479,11 +520,40 @@ public class StructureWorld extends World {
 
     @Override
     public boolean isSideSolid(BlockPos pos, EnumFacing side, boolean _default) {
-        EntityChunk chunk = this.entity.getChunkForBlock(pos);
+        EntityChunk chunk = this.getChunkForBlock(pos);
         if (chunk == null || chunk.isEmpty()) {
             return _default;
         }
-        return this.entity.getBlockState(pos).isSideSolid(this, pos, side);
+        return this.getBlockState(pos).isSideSolid(this, pos, side);
+    }
+
+    @Override
+    public boolean setBlockState(BlockPos pos, IBlockState state) {
+        BlockPos chunkPosition = this.getChunkPosition(pos);
+        EntityChunk chunk = this.chunks.get(chunkPosition);
+        if (chunk == null) {
+            for (StructureWorld.ChunkQueue queue : this.queuedChunks) {
+                if (!queue.remove && queue.position.equals(chunkPosition)) {
+                    chunk = queue.chunk;
+                }
+            }
+        }
+        if (chunk == null) {
+            if (state.getBlock() == Blocks.AIR) {
+                return false;
+            }
+            chunk = this.isRemote ? new ClientEntityChunk(this.entity, chunkPosition) : new EntityChunk(this.entity, chunkPosition);
+            this.setChunk(chunkPosition, chunk);
+        }
+        boolean success = chunk.setBlockState(this.getPositionInChunk(pos), state);
+        if (chunk.isEmpty()) {
+            chunk.unload();
+            this.queuedChunks.add(new StructureWorld.ChunkQueue(chunkPosition, chunk, true));
+        }
+        for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.entity.getPlayerHandlers().entrySet()) {
+            entry.getValue().setDirty(chunk);
+        }
+        return success;
     }
 
     @Override
@@ -493,6 +563,26 @@ public class StructureWorld extends World {
         y = transformed.getY();
         z = transformed.getZ();
         super.playSound(player, x, y, z, sound, category, volume, pitch);
+    }
+
+    public BlockPos getChunkPosition(BlockPos pos) {
+        return new BlockPos(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
+    }
+
+    public BlockPos getPositionInChunk(BlockPos pos) {
+        return new BlockPos(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
+    }
+
+    public EntityChunk getChunkForBlock(BlockPos pos) {
+        return this.chunks.get(this.getChunkPosition(pos));
+    }
+
+    public EntityChunk getChunk(BlockPos pos) {
+        return this.chunks.get(pos);
+    }
+
+    public Map<BlockPos, EntityChunk> getChunks() {
+        return this.chunks;
     }
 
     public List<IWorldEventListener> getListeners() {
@@ -505,5 +595,43 @@ public class StructureWorld extends World {
 
     public World getMainWorld() {
         return this.fallback;
+    }
+
+    public void updateChunkQueue() {
+        while (this.queuedChunks.size() > 0) {
+            StructureWorld.ChunkQueue queue = this.queuedChunks.poll();
+            if (queue.remove) {
+                this.chunks.remove(queue.position);
+            } else {
+                this.chunks.put(queue.position, queue.chunk);
+            }
+            if (this.chunks.size() <= 0) {
+                this.entity.setDead();
+            }
+        }
+    }
+
+    public void setChunk(BlockPos position, EntityChunk chunk) {
+        EntityChunk previous = this.getChunks().get(position);
+        this.queuedChunks.add(new ChunkQueue(position, chunk, false));
+        if (previous != null) {
+            previous.unload();
+            for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.entity.getPlayerHandlers().entrySet()) {
+                entry.getValue().remove(previous);
+            }
+        }
+        this.entity.recalculateCenter();
+    }
+
+    private class ChunkQueue {
+        private boolean remove;
+        private BlockPos position;
+        private EntityChunk chunk;
+
+        private ChunkQueue(BlockPos position, EntityChunk chunk, boolean remove) {
+            this.remove = remove;
+            this.position = position;
+            this.chunk = chunk;
+        }
     }
 }

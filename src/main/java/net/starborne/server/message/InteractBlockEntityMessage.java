@@ -47,7 +47,7 @@ public class InteractBlockEntityMessage extends AbstractMessage<InteractBlockEnt
         Entity entity = player.worldObj.getEntityByID(message.entity);
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
-            IBlockState state = structureEntity.getBlockState(message.position);
+            IBlockState state = structureEntity.structureWorld.getBlockState(message.position);
             ItemStack heldItem = player.getHeldItem(message.hand);
             if (!state.getBlock().onBlockActivated(structureEntity.structureWorld, message.position, state, player, message.hand, heldItem, message.side, message.hitX, message.hitY, message.hitZ)) {
                 if (heldItem != null) {

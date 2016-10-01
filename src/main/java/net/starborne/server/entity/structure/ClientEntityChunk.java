@@ -27,7 +27,7 @@ public class ClientEntityChunk extends EntityChunk {
 
     private void rebuildNeighbours() {
         for (EnumFacing facing : EnumFacing.values()) {
-            EntityChunk chunk = this.entity.getChunk(this.position.offset(facing));
+            EntityChunk chunk = this.entity.structureWorld.getChunk(this.position.offset(facing));
             if (chunk instanceof ClientEntityChunk && !chunk.isEmpty()) {
                 ((ClientEntityChunk) chunk).rebuild();
             }

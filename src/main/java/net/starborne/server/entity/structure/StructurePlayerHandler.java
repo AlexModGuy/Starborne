@@ -116,7 +116,7 @@ public class StructurePlayerHandler {
                 this.breakBlock(pos);
             } else if (!this.isHittingBlock || this.breaking == null) {
                 Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.START));
-                IBlockState state = this.entity.getBlockState(pos);
+                IBlockState state = this.entity.structureWorld.getBlockState(pos);
                 boolean realBlock = state.getMaterial() != Material.AIR;
                 if (realBlock && this.breakProgress == 0.0F) {
                     state.getBlock().onBlockClicked(this.entity.structureWorld, pos, this.player);
@@ -166,10 +166,10 @@ public class StructurePlayerHandler {
     }
 
     public void breakBlock(BlockPos pos) {
-        IBlockState state = this.entity.getBlockState(pos);
+        IBlockState state = this.entity.structureWorld.getBlockState(pos);
         Block block = state.getBlock();
         this.entity.structureWorld.playEvent(2001, pos, Block.getStateId(state));
-        this.entity.setBlockState(pos, Blocks.AIR.getDefaultState());
+        this.entity.structureWorld.setBlockState(pos, Blocks.AIR.getDefaultState());
         Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.BREAK));
         if (!this.player.capabilities.isCreativeMode) {
             ItemStack heldItem = this.player.getHeldItemMainhand();
@@ -192,7 +192,7 @@ public class StructurePlayerHandler {
             this.interactCooldown = 3;
             BlockPos pos = this.mouseOver.getBlockPos();
             Vec3d hitVec = this.mouseOver.hitVec;
-            IBlockState state = this.entity.getBlockState(pos);
+            IBlockState state = this.entity.structureWorld.getBlockState(pos);
             float hitX = (float) (hitVec.xCoord - pos.getX());
             float hitY = (float) (hitVec.yCoord - pos.getY());
             float hitZ = (float) (hitVec.zCoord - pos.getZ());

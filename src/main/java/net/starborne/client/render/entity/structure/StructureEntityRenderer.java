@@ -37,7 +37,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         GlStateManager.rotate(entity.rotationRoll, 0.0F, 0.0F, 1.0F);
         GlStateManager.disableLighting();
         for (BlockRenderLayer layer : BlockRenderLayer.values()) {
-            for (Map.Entry<BlockPos, EntityChunk> entry : entity.getChunks().entrySet()) {
+            for (Map.Entry<BlockPos, EntityChunk> entry : entity.structureWorld.getChunks().entrySet()) {
                 EntityChunk chunk = entry.getValue();
                 if (!chunk.isEmpty()) {
                     BlockPos chunkPosition = chunk.getPosition();
@@ -56,7 +56,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         }
         GlStateManager.pushMatrix();
         GlStateManager.translate(-0.5, 0.0, -0.5);
-        for (Map.Entry<BlockPos, EntityChunk> entry : entity.getChunks().entrySet()) {
+        for (Map.Entry<BlockPos, EntityChunk> entry : entity.structureWorld.getChunks().entrySet()) {
             EntityChunk chunk = entry.getValue();
             if (!chunk.isEmpty()) {
                 if (chunk instanceof ClientEntityChunk) {
@@ -78,7 +78,7 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
                 GlStateManager.glLineWidth(2.0F);
                 GlStateManager.disableTexture2D();
                 GlStateManager.depthMask(false);
-                IBlockState state = entity.getBlockState(pos);
+                IBlockState state = entity.structureWorld.getBlockState(pos);
                 if (state.getMaterial() != Material.AIR) {
                     RenderGlobal.drawSelectionBoundingBox(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.002), 0.0F, 0.0F, 0.0F, 0.4F);
                 }

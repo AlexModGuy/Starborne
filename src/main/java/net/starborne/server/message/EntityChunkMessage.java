@@ -37,7 +37,7 @@ public class EntityChunkMessage extends AbstractMessage<EntityChunkMessage> {
             StructureEntity structureEntity = (StructureEntity) entity;
             EntityChunk chunk = new ClientEntityChunk(structureEntity, message.position);
             chunk.deserialize(message.data);
-            structureEntity.setChunk(message.position, chunk);
+            structureEntity.structureWorld.setChunk(message.position, chunk);
         }
     }
 

@@ -36,11 +36,11 @@ public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMes
         Entity entity = player.worldObj.getEntityByID(message.entity);
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
-            IBlockState state = structureEntity.getBlockState(message.position);
+            IBlockState state = structureEntity.structureWorld.getBlockState(message.position);
             StructurePlayerHandler playerHandler = structureEntity.getPlayerHandler(player);
             if (message.breakState == BreakState.BREAK) {
                 if (player.capabilities.isCreativeMode || (playerHandler.getBreaking() != null && playerHandler.getBreakProgress() >= 1.0F)) {
-                    structureEntity.setBlockState(message.position, Blocks.AIR.getDefaultState());
+                    structureEntity.structureWorld.setBlockState(message.position, Blocks.AIR.getDefaultState());
                 }
             } else if (message.breakState == BreakState.START) {
                 playerHandler.startBreaking(message.position);
