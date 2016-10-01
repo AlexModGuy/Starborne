@@ -17,6 +17,7 @@ import net.starborne.client.ClientEventHandler;
 import net.starborne.server.entity.structure.ClientEntityChunk;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.entity.structure.StructurePlayerHandler;
 
 import java.util.Map;
 
@@ -66,23 +67,25 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         }
         GlStateManager.popMatrix();
         GlStateManager.enableLighting();
-        Map.Entry<StructureEntity, RayTraceResult> mouseOver = ClientEventHandler.mouseOver;
-        if (mouseOver != null && mouseOver.getKey() == entity) {
-            RayTraceResult result = mouseOver.getValue();
-            BlockPos pos = result.getBlockPos();
-            GlStateManager.translate(-0.5, 0.0, -0.5);
-            GlStateManager.enableBlend();
-            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-            GlStateManager.glLineWidth(2.0F);
-            GlStateManager.disableTexture2D();
-            GlStateManager.depthMask(false);
-            IBlockState state = entity.getBlockState(pos);
-            if (state.getMaterial() != Material.AIR) {
-                RenderGlobal.drawSelectionBoundingBox(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.002), 0.0F, 0.0F, 0.0F, 0.4F);
+        if (ClientEventHandler.mousedOver == entity) {
+            StructurePlayerHandler handler = ClientEventHandler.handlers.get(entity);
+            if (handler != null) {
+                RayTraceResult result = handler.getMouseOver();
+                BlockPos pos = result.getBlockPos();
+                GlStateManager.translate(-0.5, 0.0, -0.5);
+                GlStateManager.enableBlend();
+                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.glLineWidth(2.0F);
+                GlStateManager.disableTexture2D();
+                GlStateManager.depthMask(false);
+                IBlockState state = entity.getBlockState(pos);
+                if (state.getMaterial() != Material.AIR) {
+                    RenderGlobal.drawSelectionBoundingBox(state.getSelectedBoundingBox(entity.structureWorld, pos).expandXyz(0.002), 0.0F, 0.0F, 0.0F, 0.4F);
+                }
+                GlStateManager.depthMask(true);
+                GlStateManager.enableTexture2D();
+                GlStateManager.disableBlend();
             }
-            GlStateManager.depthMask(true);
-            GlStateManager.enableTexture2D();
-            GlStateManager.disableBlend();
         }
         GlStateManager.popMatrix();
         super.doRender(entity, x, y, z, entityYaw, partialTicks);

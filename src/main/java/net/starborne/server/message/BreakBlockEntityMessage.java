@@ -10,19 +10,21 @@ import net.minecraft.init.Blocks;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
 import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.entity.structure.StructurePlayerHandler;
 
 public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMessage> {
     private int entity;
     private BlockPos position;
+    private BreakState breakState;
 
     public BreakBlockEntityMessage() {
     }
 
-    public BreakBlockEntityMessage(int entity, BlockPos position) {
+    public BreakBlockEntityMessage(int entity, BlockPos position, BreakState breakState) {
         this.entity = entity;
         this.position = position;
+        this.breakState = breakState;
     }
 
     @Override
@@ -35,8 +37,15 @@ public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMes
         if (entity instanceof StructureEntity) {
             StructureEntity structureEntity = (StructureEntity) entity;
             IBlockState state = structureEntity.getBlockState(message.position);
-            if (player.capabilities.isCreativeMode) {
-                structureEntity.setBlockState(message.position, Blocks.AIR.getDefaultState());
+            StructurePlayerHandler playerHandler = structureEntity.getPlayerHandler(player);
+            if (message.breakState == BreakState.BREAK) {
+                if (player.capabilities.isCreativeMode || (playerHandler.getBreaking() != null && playerHandler.getBreakProgress() >= 1.0F)) {
+                    structureEntity.setBlockState(message.position, Blocks.AIR.getDefaultState());
+                }
+            } else if (message.breakState == BreakState.START) {
+                playerHandler.startBreaking(message.position);
+            } else {
+                playerHandler.startBreaking(null);
             }
         }
     }
@@ -45,16 +54,19 @@ public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMes
     public void fromBytes(ByteBuf buf) {
         this.entity = buf.readInt();
         this.position = BlockPos.fromLong(buf.readLong());
+        this.breakState = BreakState.values()[buf.readByte()];
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         buf.writeInt(this.entity);
         buf.writeLong(this.position.toLong());
+        buf.writeByte(this.breakState.ordinal());
     }
 
-    @Override
-    public boolean registerOnSide(Side side) {
-        return side.isServer();
+    public enum BreakState {
+        START,
+        STOP,
+        BREAK
     }
 }

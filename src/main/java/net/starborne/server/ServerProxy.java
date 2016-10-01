@@ -1,5 +1,11 @@
 package net.starborne.server;
 
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.audio.ISound;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.starborne.server.biome.BiomeHandler;
 import net.starborne.server.block.BlockRegistry;
@@ -31,5 +37,11 @@ public class ServerProxy {
 
     public StructureWorld createStructureWorld(StructureEntity entity) {
         return new StructureWorldServer(entity);
+    }
+
+    public void playSound(ISound sound) {
+    }
+
+    public void pickBlock(EntityPlayer player, RayTraceResult mouseOver, TileEntity tile, World world, IBlockState state) {
     }
 }

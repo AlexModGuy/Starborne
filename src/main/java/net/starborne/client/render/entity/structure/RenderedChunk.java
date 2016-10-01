@@ -1,5 +1,10 @@
 package net.starborne.client.render.entity.structure;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockChest;
+import net.minecraft.block.BlockEnderChest;
+import net.minecraft.block.BlockSign;
+import net.minecraft.block.BlockSkull;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockModelRenderer;
@@ -7,7 +12,9 @@ import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
@@ -19,8 +26,10 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.math.BlockPos;
+import net.starborne.client.ClientEventHandler;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.entity.structure.StructurePlayerHandler;
 import org.lwjgl.opengl.GL11;
 
 import java.util.ArrayDeque;
@@ -36,6 +45,7 @@ public class RenderedChunk {
     private static final TextureManager TEXTURE_MANAGER = MC.renderEngine;
     private static final BlockRendererDispatcher BLOCK_RENDERER_DISPATCHER = MC.getBlockRendererDispatcher();
     private static final BlockModelRenderer BLOCK_MODEL_RENDERER = BLOCK_RENDERER_DISPATCHER.getBlockModelRenderer();
+    private final TextureAtlasSprite[] destroyStages = new TextureAtlasSprite[10];
 
     private final StructureEntity entity;
     private final EntityChunk chunk;
@@ -61,6 +71,10 @@ public class RenderedChunk {
         }
         for (int i = 0; i < this.renderLayerLocks.length; i++) {
             this.renderLayerLocks[i] = new ReentrantLock();
+        }
+        TextureMap textureMap = MC.getTextureMapBlocks();
+        for (int i = 0; i < this.destroyStages.length; ++i) {
+            this.destroyStages[i] = textureMap.getAtlasSprite("minecraft:blocks/destroy_stage_" + i);
         }
     }
 
@@ -99,12 +113,64 @@ public class RenderedChunk {
     }
 
     public void render(float partialTicks) {
+        int breakProgress = 0;
+        BlockPos breaking = null;
+        StructurePlayerHandler handler = ClientEventHandler.handlers.get(this.entity);
+        if (handler != null) {
+            BlockPos pos = handler.getBreaking();
+            if (pos != null) {
+                breakProgress = (int) ((handler.getBreakProgress() * 10.0F));
+                breaking = pos;
+            }
+        }
         for (Map.Entry<TileEntity, TileEntitySpecialRenderer<TileEntity>> renderer : this.specialRenderers.entrySet()) {
             TileEntity tile = renderer.getKey();
             TileEntitySpecialRenderer<TileEntity> value = renderer.getValue();
             BlockPos position = tile.getPos();
             value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, -1);
+            if (position.equals(breaking)) {
+                value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, breakProgress);
+            }
             TEXTURE_MANAGER.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        }
+        if (breaking != null) {
+            IBlockState state = this.entity.structureWorld.getBlockState(breaking);
+            Block block = state.getBlock();
+            TileEntity tile = this.entity.structureWorld.getTileEntity(breaking);
+            boolean hasBreak = block instanceof BlockChest || block instanceof BlockEnderChest || block instanceof BlockSign || block instanceof BlockSkull;
+            if (!hasBreak) {
+                hasBreak = tile != null && tile.canRenderBreaking();
+            }
+            if (!hasBreak) {
+                GlStateManager.pushMatrix();
+                RenderHelper.disableStandardItemLighting();
+                MC.entityRenderer.disableLightmap();
+                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
+                Tessellator tessellator = Tessellator.getInstance();
+                net.minecraft.client.renderer.VertexBuffer builder = tessellator.getBuffer();
+                GlStateManager.enableBlend();
+                GlStateManager.enableAlpha();
+                GlStateManager.alphaFunc(516, 0.1F);
+                GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F);
+                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.doPolygonOffset(-3.0F, -3.0F);
+                GlStateManager.enablePolygonOffset();
+                GlStateManager.depthMask(false);
+                builder.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+                builder.noColor();
+                BLOCK_RENDERER_DISPATCHER.renderBlockDamage(state, breaking, this.destroyStages[breakProgress], this.entity.structureWorld);
+                tessellator.draw();
+                GlStateManager.doPolygonOffset(0.0F, 0.0F);
+                GlStateManager.disablePolygonOffset();
+                GlStateManager.disableBlend();
+                GlStateManager.depthMask(true);
+                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
+                GlStateManager.popMatrix();
+                RenderHelper.enableStandardItemLighting();
+                MC.entityRenderer.enableLightmap();
+            }
         }
     }
 

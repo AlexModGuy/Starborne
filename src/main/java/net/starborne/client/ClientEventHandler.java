@@ -1,84 +1,89 @@
 package net.starborne.client;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import net.minecraftforge.event.ForgeEventFactory;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.starborne.Starborne;
 import net.starborne.server.entity.structure.StructureEntity;
-import net.starborne.server.entity.structure.world.StructureWorld;
-import net.starborne.server.message.BreakBlockEntityMessage;
-import net.starborne.server.message.InteractBlockEntityMessage;
+import net.starborne.server.entity.structure.StructurePlayerHandler;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ClientEventHandler {
     private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
 
-    public static Map.Entry<StructureEntity, RayTraceResult> mouseOver;
+    public static Map<StructureEntity, StructurePlayerHandler> handlers = new HashMap<>();
+    public static StructureEntity mousedOver;
 
-    private int interactCooldown;
+    private static ArrayDeque<StructureEntity> queuedHandlers = new ArrayDeque<>();
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-        World world = MINECRAFT.theWorld;
         EntityPlayerSP player = MINECRAFT.thePlayer;
         if (player != null) {
-            mouseOver = this.getSelectedBlock(player);
-        }
-        if (this.interactCooldown > 0) {
-            this.interactCooldown--;
-        }
-        if (player != null && mouseOver != null && MINECRAFT.gameSettings.keyBindPickBlock.isKeyDown()) {
-            ItemStack result;
-            StructureEntity structure = mouseOver.getKey();
-            TileEntity tile = null;
-            RayTraceResult target = mouseOver.getValue();
-            if (target.typeOfHit == RayTraceResult.Type.BLOCK) {
-                StructureWorld structureWorld = structure.structureWorld;
-                IBlockState state = structureWorld.getBlockState(target.getBlockPos());
-                if (!state.getBlock().isAir(state, structureWorld, target.getBlockPos())) {
-                    if (player.capabilities.isCreativeMode && GuiScreen.isCtrlKeyDown() && state.getBlock().hasTileEntity(state)) {
-                        tile = structureWorld.getTileEntity(target.getBlockPos());
+            if (ClientEventHandler.queuedHandlers.size() > 0) {
+                StructureEntity structureEntity = ClientEventHandler.queuedHandlers.poll();
+                ClientEventHandler.handlers.put(structureEntity, new StructurePlayerHandler(structureEntity, MINECRAFT.thePlayer));
+            }
+
+            Map.Entry<StructureEntity, RayTraceResult> mouseOver = this.getSelectedBlock(player);
+
+            StructureEntity currentMousedOver = mouseOver != null ? mouseOver.getKey() : null;
+
+            if (mouseOver != null) {
+                StructurePlayerHandler mouseOverHandler = ClientEventHandler.handlers.get(mouseOver.getKey());
+                if (mouseOverHandler != null) {
+                    RayTraceResult prevMouseOver = mouseOverHandler.getMouseOver();
+                    mouseOverHandler.setMouseOver(mouseOver.getValue());
+                    if (prevMouseOver == null || !prevMouseOver.getBlockPos().equals(mouseOver.getValue().getBlockPos())) {
+                        mouseOverHandler.startBreaking(null);
                     }
-                    result = state.getBlock().getPickBlock(state, target, structureWorld, target.getBlockPos(), player);
-                    if (tile != null) {
-                        MINECRAFT.storeTEInStack(result, tile);
+                }
+            }
+
+            if (mousedOver != null && mousedOver != currentMousedOver) {
+                StructurePlayerHandler mouseOverHandler = ClientEventHandler.handlers.get(mousedOver);
+                if (mouseOverHandler != null) {
+                    mouseOverHandler.startBreaking(null);
+                    mouseOverHandler.setMouseOver(null);
+                }
+            }
+
+            mousedOver = currentMousedOver;
+
+            if (mousedOver != null && !MINECRAFT.gameSettings.keyBindAttack.isKeyDown()) {
+                if (mousedOver != null) {
+                    StructurePlayerHandler mouseOverHandler = ClientEventHandler.handlers.get(mousedOver);
+                    if (mouseOverHandler != null) {
+                        mouseOverHandler.startBreaking(null);
                     }
-                    if (player.capabilities.isCreativeMode) {
-                        player.inventory.setPickedItemStack(result);
-                        MINECRAFT.playerController.sendSlotPacket(player.getHeldItem(EnumHand.MAIN_HAND), player.inventory.currentItem + 36);
-                    } else {
-                        int slot = player.inventory.getSlotFor(result);
-                        if (slot != -1) {
-                            if (InventoryPlayer.isHotbar(slot)) {
-                                player.inventory.currentItem = slot;
-                            } else {
-                                MINECRAFT.playerController.pickItem(slot);
-                            }
-                        }
-                    }
+                }
+            }
+
+            for (Map.Entry<StructureEntity, StructurePlayerHandler> entry : ClientEventHandler.handlers.entrySet()) {
+                entry.getValue().update();
+            }
+
+            if (mousedOver != null && MINECRAFT.gameSettings.keyBindPickBlock.isKeyDown()) {
+                StructurePlayerHandler handler = ClientEventHandler.handlers.get(mousedOver);
+                if (handler != null) {
+                    handler.onPickBlock();
                 }
             }
         }
@@ -86,14 +91,14 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onRightClickAir(PlayerInteractEvent.RightClickEmpty event) {
-        this.interactStructure(event.getEntityPlayer(), event.getHand());
+        this.interactStructure(event.getHand());
     }
 
     @SubscribeEvent
     public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         EntityPlayer player = event.getEntityPlayer();
         EnumHand hand = event.getHand();
-        if (!this.interactStructure(player, hand)) {
+        if (!this.interactStructure(hand)) {
             event.setCanceled(true);
             ItemStack heldItem = player.getHeldItem(hand);
             if (heldItem != null) {
@@ -127,51 +132,42 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onClickAir(PlayerInteractEvent.LeftClickEmpty event) {
-        EntityPlayer player = event.getEntityPlayer();
-        EnumHand hand = event.getHand();
-        if (mouseOver != null && this.interactCooldown <= 0) {
-            this.interactCooldown = 3;
-            StructureEntity structure = mouseOver.getKey();
-            RayTraceResult result = mouseOver.getValue();
-            BlockPos pos = result.getBlockPos();
-            IBlockState state = structure.getBlockState(pos);
-            if (player.capabilities.isCreativeMode) {
-                structure.structureWorld.playEvent(2001, pos, Block.getStateId(state));
-                structure.setBlockState(pos, Blocks.AIR.getDefaultState());
-                Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(structure.getEntityId(), pos));
+        if (mousedOver != null) {
+            StructurePlayerHandler mouseOverHandler = ClientEventHandler.handlers.get(mousedOver);
+            if (mouseOverHandler != null) {
+                RayTraceResult mouseOver = mouseOverHandler.getMouseOver();
+                if (mouseOver != null && mouseOver.typeOfHit == RayTraceResult.Type.BLOCK) {
+                    mouseOverHandler.clickBlock(mouseOver.getBlockPos());
+                }
             }
         }
     }
 
-    private boolean interactStructure(EntityPlayer player, EnumHand hand) {
-        if (mouseOver != null && this.interactCooldown <= 0) {
-            this.interactCooldown = 3;
-            StructureEntity structure = mouseOver.getKey();
-            RayTraceResult result = mouseOver.getValue();
-            BlockPos pos = result.getBlockPos();
-            Vec3d hitVec = result.hitVec;
-            IBlockState state = structure.getBlockState(pos);
-            float hitX = (float) (hitVec.xCoord - pos.getX());
-            float hitY = (float) (hitVec.yCoord - pos.getY());
-            float hitZ = (float) (hitVec.zCoord - pos.getZ());
-            ItemStack heldItem = player.getHeldItem(hand);
-            Starborne.networkWrapper.sendToServer(new InteractBlockEntityMessage(structure.getEntityId(), pos, result.sideHit, hitX, hitY, hitZ, hand));
-            if (state.getBlock().onBlockActivated(structure.structureWorld, pos, state, player, hand, heldItem, result.sideHit, hitX, hitY, hitZ)) {
-                player.swingArm(hand);
-                return true;
-            } else if (heldItem != null) {
-                int size = heldItem.stackSize;
-                EnumActionResult actionResult = heldItem.onItemUse(player, structure.structureWorld, pos, hand, result.sideHit, hitX, hitY, hitZ);
-                if (actionResult == EnumActionResult.SUCCESS) {
-                    player.swingArm(hand);
+    private boolean interactStructure(EnumHand hand) {
+        if (mousedOver != null) {
+            StructurePlayerHandler mouseOverHandler = ClientEventHandler.handlers.get(mousedOver);
+            if (mouseOverHandler != null) {
+                RayTraceResult mouseOver = mouseOverHandler.getMouseOver();
+                if (mouseOver != null && mouseOver.typeOfHit == RayTraceResult.Type.BLOCK) {
+                    return mouseOverHandler.interact(hand);
                 }
-                if (player.capabilities.isCreativeMode && heldItem.stackSize < size) {
-                    heldItem.stackSize = size;
-                }
-                return true;
             }
         }
         return false;
+    }
+
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        Entity entity = event.getEntity();
+        if (entity instanceof StructureEntity) {
+            StructureEntity structureEntity = (StructureEntity) entity;
+            ClientEventHandler.queuedHandlers.add(structureEntity);
+        }
+    }
+
+    @SubscribeEvent
+    public void onWorldUnload(WorldEvent.Unload event) {
+        ClientEventHandler.handlers.clear();
     }
 
     private Map.Entry<StructureEntity, RayTraceResult> getSelectedBlock(EntityPlayer player) {

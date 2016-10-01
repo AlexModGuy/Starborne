@@ -11,6 +11,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.starborne.server.entity.structure.StructureEntity;
@@ -54,6 +55,10 @@ public class InteractBlockEntityMessage extends AbstractMessage<InteractBlockEnt
                     heldItem.onItemUse(player, structureEntity.structureWorld, message.position, message.hand, message.side, message.hitX, message.hitY, message.hitZ);
                     if (player.capabilities.isCreativeMode && heldItem.stackSize < size) {
                         heldItem.stackSize = size;
+                    }
+                    if (heldItem.stackSize <= 0) {
+                        player.setHeldItem(message.hand, null);
+                        ForgeEventFactory.onPlayerDestroyItem(player, heldItem, message.hand);
                     }
                 }
             }

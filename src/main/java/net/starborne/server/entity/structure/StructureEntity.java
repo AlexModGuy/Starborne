@@ -2,6 +2,7 @@ package net.starborne.server.entity.structure;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
@@ -16,6 +17,7 @@ import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.util.Constants;
 import net.starborne.Starborne;
+import net.starborne.client.ClientEventHandler;
 import net.starborne.server.biome.BiomeHandler;
 import net.starborne.server.entity.structure.world.StructureWorld;
 import net.starborne.server.util.Matrix;
@@ -32,7 +34,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     public float prevRotationRoll;
 
     private Map<BlockPos, EntityChunk> chunks;
-    private Map<EntityPlayerMP, EntityChunkTracker> trackers;
+    private Map<EntityPlayer, StructurePlayerHandler> playerHandlers;
 
     private ArrayDeque<ChunkQueue> queuedChunks;
 
@@ -54,8 +56,8 @@ public class StructureEntity extends Entity implements IBlockAccess {
         if (this.chunks == null) {
             this.chunks = new HashMap<>();
         }
-        if (this.trackers == null) {
-            this.trackers = new HashMap<>();
+        if (this.playerHandlers == null) {
+            this.playerHandlers = new HashMap<>();
         }
         if (this.queuedChunks == null) {
             this.queuedChunks = new ArrayDeque<>();
@@ -94,7 +96,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
         }
         if (!this.worldObj.isRemote) {
             //TODO Improve trackers further
-            for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+            for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.playerHandlers.entrySet()) {
                 entry.getValue().update();
             }
         }
@@ -164,8 +166,8 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     public void addTrackingPlayer(EntityPlayerMP player) {
         super.addTrackingPlayer(player);
-        EntityChunkTracker tracker = new EntityChunkTracker(this, player);
-        this.trackers.put(player, tracker);
+        StructurePlayerHandler tracker = new StructurePlayerHandler(this, player);
+        this.playerHandlers.put(player, tracker);
         for (Map.Entry<BlockPos, EntityChunk> chunk : this.chunks.entrySet()) {
             tracker.setDirty(chunk.getValue());
         }
@@ -174,7 +176,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
     @Override
     public void removeTrackingPlayer(EntityPlayerMP player) {
         super.removeTrackingPlayer(player);
-        this.trackers.remove(player);
+        this.playerHandlers.remove(player);
     }
 
     public void setChunk(BlockPos position, EntityChunk chunk) {
@@ -182,7 +184,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
         this.queuedChunks.add(new ChunkQueue(position, chunk, false));
         if (previous != null) {
             previous.unload();
-            for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+            for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.playerHandlers.entrySet()) {
                 entry.getValue().remove(previous);
             }
         }
@@ -259,7 +261,7 @@ public class StructureEntity extends Entity implements IBlockAccess {
             chunk.unload();
             this.queuedChunks.add(new ChunkQueue(chunkPosition, chunk, true));
         }
-        for (Map.Entry<EntityPlayerMP, EntityChunkTracker> entry : this.trackers.entrySet()) {
+        for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.playerHandlers.entrySet()) {
             entry.getValue().setDirty(chunk);
         }
         return success;
@@ -309,6 +311,16 @@ public class StructureEntity extends Entity implements IBlockAccess {
                 ((ClientEntityChunk) entry.getValue()).rebuild();
             }
         }
+    }
+
+    public StructurePlayerHandler getPlayerHandler(EntityPlayer player) {
+        return this.playerHandlers.get(player);
+    }
+
+    @Override
+    public void setDead() {
+        super.setDead();
+        ClientEventHandler.handlers.remove(this);
     }
 
     private class ChunkQueue {
