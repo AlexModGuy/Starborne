@@ -17,6 +17,8 @@ import net.starborne.server.entity.structure.world.StructureWorldServer;
 import net.starborne.server.item.ItemRegistry;
 
 public class ServerProxy {
+    public static final ServerStructureHandler STRUCTURE_HANDLER = new ServerStructureHandler();
+
     public void onPreInit() {
         BlockRegistry.onPreInit();
         ItemRegistry.onPreInit();
@@ -43,5 +45,9 @@ public class ServerProxy {
     }
 
     public void pickBlock(EntityPlayer player, RayTraceResult mouseOver, TileEntity tile, World world, IBlockState state) {
+    }
+
+    public ServerStructureHandler getStructureHandler(World world) {
+        return STRUCTURE_HANDLER;
     }
 }

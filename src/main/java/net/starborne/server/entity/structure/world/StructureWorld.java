@@ -620,7 +620,6 @@ public class StructureWorld extends World {
                 entry.getValue().remove(previous);
             }
         }
-        this.entity.recalculateCenter();
     }
 
     private class ChunkQueue {

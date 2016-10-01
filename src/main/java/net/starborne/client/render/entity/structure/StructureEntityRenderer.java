@@ -2,6 +2,7 @@ package net.starborne.client.render.entity.structure;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.entity.Render;
@@ -13,7 +14,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import net.starborne.client.ClientEventHandler;
+import net.starborne.Starborne;
+import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.ClientEntityChunk;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
@@ -23,6 +25,8 @@ import java.util.Map;
 
 @SideOnly(Side.CLIENT)
 public class StructureEntityRenderer extends Render<StructureEntity> {
+    private static final Minecraft MC = Minecraft.getMinecraft();
+
     public StructureEntityRenderer(RenderManager renderManager) {
         super(renderManager);
     }
@@ -67,8 +71,9 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         }
         GlStateManager.popMatrix();
         GlStateManager.enableLighting();
-        if (ClientEventHandler.mousedOver == entity) {
-            StructurePlayerHandler handler = ClientEventHandler.handlers.get(entity);
+        ServerStructureHandler structureHandler = Starborne.PROXY.getStructureHandler(entity.worldObj);
+        if (structureHandler.getMousedOver(MC.thePlayer) == entity) {
+            StructurePlayerHandler handler = structureHandler.get(entity, MC.thePlayer);
             if (handler != null) {
                 RayTraceResult result = handler.getMouseOver();
                 BlockPos pos = result.getBlockPos();

@@ -11,13 +11,14 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 import net.starborne.Starborne;
-import net.starborne.client.ClientEventHandler;
 import net.starborne.server.entity.structure.world.StructureWorld;
 import net.starborne.server.util.Matrix;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class StructureEntity extends Entity {
@@ -53,15 +54,24 @@ public class StructureEntity extends Entity {
 
     @Override
     public void onUpdate() {
-        this.prevRotationRoll = this.rotationRoll;
         super.onUpdate();
+
+        this.prevRotationRoll = this.rotationRoll;
+
         this.structureWorld.tick();
 
-        if (!this.worldObj.isRemote) {
-            //TODO Improve trackers further
-            for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.playerHandlers.entrySet()) {
-                entry.getValue().update();
+        //TODO Improve trackers further
+        List<EntityPlayer> remove = new ArrayList<>();
+
+        for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.playerHandlers.entrySet()) {
+            entry.getValue().update();
+            if (entry.getKey().isDead) {
+                remove.add(entry.getKey());
             }
+        }
+
+        for (EntityPlayer player : remove) {
+            this.playerHandlers.remove(player);
         }
 
         this.rotationPitch += 0.1F;
@@ -167,7 +177,11 @@ public class StructureEntity extends Entity {
     @Override
     public void setDead() {
         super.setDead();
-        ClientEventHandler.handlers.remove(this);
+        Starborne.PROXY.getStructureHandler(this.worldObj).removeEntity(this);
+    }
+
+    public void addPlayerHandler(EntityPlayer player) {
+        this.playerHandlers.put(player, new StructurePlayerHandler(this, player));
     }
 
     public StructurePlayerHandler getPlayerHandler(EntityPlayer player) {

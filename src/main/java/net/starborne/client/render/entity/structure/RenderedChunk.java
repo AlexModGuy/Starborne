@@ -26,7 +26,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.math.BlockPos;
-import net.starborne.client.ClientEventHandler;
+import net.starborne.Starborne;
+import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.StructurePlayerHandler;
@@ -115,7 +116,8 @@ public class RenderedChunk {
     public void render(float partialTicks) {
         int breakProgress = 0;
         BlockPos breaking = null;
-        StructurePlayerHandler handler = ClientEventHandler.handlers.get(this.entity);
+        ServerStructureHandler structureHandler = Starborne.PROXY.getStructureHandler(this.entity.worldObj);
+        StructurePlayerHandler handler = structureHandler.get(this.entity, MC.thePlayer);
         if (handler != null) {
             BlockPos pos = handler.getBreaking();
             if (pos != null) {

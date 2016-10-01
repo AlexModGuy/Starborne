@@ -14,12 +14,14 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.starborne.client.render.RenderRegistry;
 import net.starborne.server.ServerProxy;
+import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.world.StructureWorld;
 import net.starborne.server.entity.structure.world.StructureWorldClient;
 
 public class ClientProxy extends ServerProxy {
-    private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
+    public static final ClientStructureHandler STRUCTURE_HANDLER = new ClientStructureHandler();
+    public static final Minecraft MINECRAFT = Minecraft.getMinecraft();
 
     @Override
     public void onPreInit() {
@@ -72,5 +74,10 @@ public class ClientProxy extends ServerProxy {
                 }
             }
         }
+    }
+
+    @Override
+    public ServerStructureHandler getStructureHandler(World world) {
+        return world.isRemote ? STRUCTURE_HANDLER : super.getStructureHandler(world);
     }
 }
