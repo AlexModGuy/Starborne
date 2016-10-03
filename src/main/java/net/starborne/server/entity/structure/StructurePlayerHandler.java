@@ -7,7 +7,6 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumActionResult;
@@ -37,6 +36,8 @@ public class StructurePlayerHandler {
     private final EntityPlayer player;
     private List<EntityChunk> dirty = new LinkedList<>();
     private Map<EntityChunk, BlockStateContainer> lastData = new HashMap<>();
+
+    private BlockPos lastBroken;
 
     private BlockPos breaking;
     private boolean isHittingBlock;
@@ -93,9 +94,9 @@ public class StructurePlayerHandler {
                 if (differences.size() == 1) {
                     BlockPos chunkPos = chunk.getPosition();
                     BlockPos globalPosition = differences.get(0).add(chunkPos.getX() << 4, chunkPos.getY() << 4, chunkPos.getZ() << 4);
-                    Starborne.networkWrapper.sendTo(new SetEntityBlockMessage(this.entity.getEntityId(), globalPosition, chunk.getBlockState(differences.get(0))), (EntityPlayerMP) this.player);
+                    Starborne.NETWORK_WRAPPER.sendTo(new SetEntityBlockMessage(this.entity.getEntityId(), globalPosition, chunk.getBlockState(differences.get(0))), (EntityPlayerMP) this.player);
                 } else {
-                    Starborne.networkWrapper.sendTo(new EntityChunkMessage(this.entity.getEntityId(), chunk), (EntityPlayerMP) this.player);
+                    Starborne.NETWORK_WRAPPER.sendTo(new EntityChunkMessage(this.entity.getEntityId(), chunk), (EntityPlayerMP) this.player);
                 }
             }
             this.lastData.put(chunk, newLast);
@@ -119,7 +120,7 @@ public class StructurePlayerHandler {
             if (this.player.capabilities.isCreativeMode) {
                 this.breakBlock(pos);
             } else if (!this.isHittingBlock || this.breaking == null) {
-                Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.START));
+                Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.START));
                 IBlockState state = this.entity.structureWorld.getBlockState(pos);
                 boolean realBlock = state.getMaterial() != Material.AIR;
                 if (realBlock && this.breakProgress == 0.0F) {
@@ -129,8 +130,7 @@ public class StructurePlayerHandler {
                     this.breakBlock(pos);
                 } else {
                     this.isHittingBlock = true;
-                    this.breaking = pos;
-                    this.breakProgress = 0.0F;
+                    this.startBreaking(pos);
                     this.breakSoundTimer = 0.0F;
                 }
             }
@@ -140,8 +140,7 @@ public class StructurePlayerHandler {
     }
 
     public boolean updateBreaking() {
-        if (this.breakDelay <= 0 && this.breaking != null && this.isHittingBlock) {
-            this.breakDelay = 2;
+        if (this.breaking != null && this.isHittingBlock) {
             IBlockState state = this.entity.structureWorld.getBlockState(this.breaking);
             Block block = state.getBlock();
             if (state.getMaterial() == Material.AIR) {
@@ -149,19 +148,28 @@ public class StructurePlayerHandler {
                 return false;
             } else {
                 this.breakProgress += state.getPlayerRelativeBlockHardness(this.player, this.entity.structureWorld, this.breaking);
-                if (this.breakSoundTimer % 4.0F == 0.0F) {
-                    SoundType soundType = block.getSoundType();
-                    Point3d point = this.entity.getTransformedPosition(new Point3d(this.breaking.getX(), this.breaking.getY(), this.breaking.getZ()));
-                    Starborne.PROXY.playSound(new PositionedSoundRecord(soundType.getHitSound(), SoundCategory.NEUTRAL, (soundType.getVolume() + 1.0F) / 8.0F, soundType.getPitch() * 0.5F, new BlockPos(point.getX(), point.getY(), point.getZ())));
-                }
-                this.breakSoundTimer++;
-                if (this.breakProgress >= 1.0F) {
-                    this.isHittingBlock = false;
-                    Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), this.breaking, BreakBlockEntityMessage.BreakState.STOP));
-                    this.breakBlock(this.breaking);
-                    this.breakProgress = 0.0F;
-                    this.breakSoundTimer = 0.0F;
-                    this.interactCooldown = 5;
+                if (this.entity.worldObj.isRemote) {
+                    if (this.breakSoundTimer % 4.0F == 0.0F) {
+                        SoundType soundType = block.getSoundType();
+                        Point3d point = this.entity.getTransformedPosition(new Point3d(this.breaking.getX(), this.breaking.getY(), this.breaking.getZ()));
+                        Starborne.PROXY.playSound(new PositionedSoundRecord(soundType.getHitSound(), SoundCategory.NEUTRAL, (soundType.getVolume() + 1.0F) / 8.0F, soundType.getPitch() * 0.5F, new BlockPos(point.getX(), point.getY(), point.getZ())));
+                    }
+                    this.breakSoundTimer++;
+                    if (this.breakProgress >= 1.0F) {
+                        this.isHittingBlock = false;
+                        Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), this.breaking, BreakBlockEntityMessage.BreakState.STOP));
+                        this.breakBlock(this.breaking);
+                        this.breakProgress = 0.0F;
+                        this.breakSoundTimer = 0.0F;
+                        this.interactCooldown = 5;
+                    }
+                } else {
+                    if (this.breakProgress >= 1.0F) {
+                        this.startBreaking(null);
+                        this.isHittingBlock = false;
+                        this.breakProgress = 0.0F;
+                        this.lastBroken = this.breaking;
+                    }
                 }
                 return true;
             }
@@ -172,9 +180,10 @@ public class StructurePlayerHandler {
     public void breakBlock(BlockPos pos) {
         IBlockState state = this.entity.structureWorld.getBlockState(pos);
         Block block = state.getBlock();
-        this.entity.structureWorld.playEvent(2001, pos, Block.getStateId(state));
-        this.entity.structureWorld.setBlockState(pos, Blocks.AIR.getDefaultState());
-        Starborne.networkWrapper.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.BREAK));
+        if (this.entity.worldObj.isRemote) {
+            this.entity.structureWorld.playEvent(2001, pos, Block.getStateId(state));
+            Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.BREAK));
+        }
         if (!this.player.capabilities.isCreativeMode) {
             ItemStack heldItem = this.player.getHeldItemMainhand();
             if (heldItem != null) {
@@ -184,6 +193,7 @@ public class StructurePlayerHandler {
                     this.player.setHeldItem(EnumHand.MAIN_HAND, null);
                 }
             }
+            block.harvestBlock(this.entity.structureWorld, this.player, pos, state, this.entity.structureWorld.getTileEntity(pos), heldItem);
         }
         boolean removed = block.removedByPlayer(state, this.entity.structureWorld, pos, this.player, false);
         if (removed) {
@@ -201,7 +211,7 @@ public class StructurePlayerHandler {
             float hitY = (float) (hitVec.yCoord - pos.getY());
             float hitZ = (float) (hitVec.zCoord - pos.getZ());
             ItemStack heldItem = this.player.getHeldItem(hand);
-            Starborne.networkWrapper.sendToServer(new InteractBlockEntityMessage(this.entity.getEntityId(), pos, this.mouseOver.sideHit, hitX, hitY, hitZ, hand));
+            Starborne.NETWORK_WRAPPER.sendToServer(new InteractBlockEntityMessage(this.entity.getEntityId(), pos, this.mouseOver.sideHit, hitX, hitY, hitZ, hand));
             if (state.getBlock().onBlockActivated(this.entity.structureWorld, pos, state, this.player, hand, heldItem, this.mouseOver.sideHit, hitX, hitY, hitZ)) {
                 this.player.swingArm(hand);
                 return true;
@@ -236,11 +246,20 @@ public class StructurePlayerHandler {
         return this.breaking;
     }
 
+    public BlockPos getLastBroken() {
+        return this.lastBroken;
+    }
+
     public float getBreakProgress() {
         return this.breakProgress;
     }
 
+    public void clearLastBroken() {
+        this.lastBroken = null;
+    }
+
     public void startBreaking(BlockPos position) {
+        this.clearLastBroken();
         this.breaking = position;
         this.breakProgress = 0.0F;
     }

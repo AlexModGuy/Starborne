@@ -12,12 +12,14 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.starborne.client.render.RenderRegistry;
 import net.starborne.server.ServerProxy;
 import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.world.StructureWorld;
 import net.starborne.server.entity.structure.world.StructureWorldClient;
+import net.starborne.server.message.BaseMessage;
 
 public class ClientProxy extends ServerProxy {
     public static final ClientStructureHandler STRUCTURE_HANDLER = new ClientStructureHandler();
@@ -79,5 +81,23 @@ public class ClientProxy extends ServerProxy {
     @Override
     public ServerStructureHandler getStructureHandler(World world) {
         return world.isRemote ? STRUCTURE_HANDLER : super.getStructureHandler(world);
+    }
+
+    @Override
+    public void scheduleTask(MessageContext context, Runnable runnable) {
+        if (context.side.isClient()) {
+            MINECRAFT.addScheduledTask(runnable);
+        } else {
+            super.scheduleTask(context, runnable);
+        }
+    }
+
+    @Override
+    public void handleMessage(BaseMessage message, MessageContext context) {
+        if (context.side.isClient()) {
+            this.scheduleTask(context, () -> message.onReceiveClient(MINECRAFT, MINECRAFT.theWorld, MINECRAFT.thePlayer, context));
+        } else {
+            super.handleMessage(message, context);
+        }
     }
 }

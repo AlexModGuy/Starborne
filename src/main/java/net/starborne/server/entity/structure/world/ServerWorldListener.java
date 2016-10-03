@@ -63,7 +63,7 @@ public class ServerWorldListener implements IWorldEventListener {
     @Override
     public void playEvent(EntityPlayer player, int type, BlockPos pos, int data) {
         Vec3d transformed = this.world.getEntity().getTransformedPosition(new Vec3d(pos.getX(), pos.getY(), pos.getZ()));
-        Starborne.networkWrapper.sendToAllAround(new PlayEventEntityMessage(this.world.getEntity().getEntityId(), pos, type, data, false), new NetworkRegistry.TargetPoint(this.world.getMainWorld().provider.getDimension(), transformed.xCoord, transformed.yCoord, transformed.zCoord, 64.0));
+        Starborne.NETWORK_WRAPPER.sendToAllAround(new PlayEventEntityMessage(this.world.getEntity().getEntityId(), pos, type, data, false), new NetworkRegistry.TargetPoint(this.world.getMainWorld().provider.getDimension(), transformed.xCoord, transformed.yCoord, transformed.zCoord, 64.0));
     }
 
     @Override

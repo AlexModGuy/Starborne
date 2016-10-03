@@ -74,8 +74,8 @@ public class StructureEntity extends Entity {
             this.playerHandlers.remove(player);
         }
 
-        this.rotationPitch += 0.1F;
-        this.rotationYaw += 0.1F;
+        this.rotationPitch = 25.0F;
+//        this.rotationYaw += 0.1F;
 
         if (this.posX != this.prevPosX || this.posY != this.prevPosY || this.posZ != this.prevPosZ || this.rotationYaw != this.prevRotationYaw || this.rotationPitch != this.prevRotationPitch || this.rotationRoll != this.prevRotationRoll) {
             this.transformMatrix.setIdentity();

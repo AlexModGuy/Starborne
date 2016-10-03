@@ -7,14 +7,14 @@ import java.util.Map;
 @IFMLLoadingPlugin.Name("starborne")
 @IFMLLoadingPlugin.MCVersion("1.10.2")
 @IFMLLoadingPlugin.SortingIndex(1002)
-@IFMLLoadingPlugin.TransformerExclusions("net.ilexiconn.llibrary.server.asm")
+@IFMLLoadingPlugin.TransformerExclusions({ "net.ilexiconn.llibrary.server.asm", "net.starborne.server.core" })
 public class StarbornePlugin implements IFMLLoadingPlugin {
     public static boolean loaded;
     public static boolean development;
 
     @Override
     public String[] getASMTransformerClass() {
-        return new String[] { "net.starborne.server.patcher.StarborneRuntimePatcher", "net.starborne.server.core.StarborneTransformer" };
+        return new String[] { "net.starborne.server.core.StarborneTransformer" };
     }
 
     @Override
@@ -31,6 +31,7 @@ public class StarbornePlugin implements IFMLLoadingPlugin {
     public void injectData(Map<String, Object> data) {
         StarbornePlugin.loaded = true;
         StarbornePlugin.development = !(Boolean) data.get("runtimeDeobfuscationEnabled");
+        MappingHandler.loadMappings();
     }
 
     @Override

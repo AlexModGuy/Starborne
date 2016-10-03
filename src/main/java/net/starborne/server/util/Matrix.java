@@ -1,7 +1,6 @@
 package net.starborne.server.util;
 
 import com.google.common.base.Preconditions;
-import net.ilexiconn.llibrary.client.util.StackUnderflowError;
 import net.minecraft.util.math.Vec3d;
 
 import javax.vecmath.AxisAngle4d;
@@ -80,7 +79,7 @@ public class Matrix {
 
     public void pop() {
         if (this.matrixStack.size() < 2) {
-            throw new StackUnderflowError();
+            throw new Error("Stack underflow");
         }
         this.freeMatrix(this.matrixStack.pop());
     }

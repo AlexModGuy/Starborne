@@ -1,19 +1,19 @@
 package net.starborne.server.message;
 
 import io.netty.buffer.ByteBuf;
-import net.ilexiconn.llibrary.server.network.AbstractMessage;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.StructurePlayerHandler;
 
-public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMessage> {
+public class BreakBlockEntityMessage extends BaseMessage {
     private int entity;
     private BlockPos position;
     private BreakState breakState;
@@ -28,40 +28,43 @@ public class BreakBlockEntityMessage extends AbstractMessage<BreakBlockEntityMes
     }
 
     @Override
-    public void onClientReceived(Minecraft client, BreakBlockEntityMessage message, EntityPlayer player, MessageContext context) {
+    public void serialize(ByteBuf buf) {
+        buf.writeInt(this.entity);
+        buf.writeLong(this.position.toLong());
+        buf.writeByte(this.breakState.ordinal());
     }
 
     @Override
-    public void onServerReceived(MinecraftServer server, BreakBlockEntityMessage message, EntityPlayer player, MessageContext context) {
-        Entity entity = player.worldObj.getEntityByID(message.entity);
-        if (entity instanceof StructureEntity) {
-            StructureEntity structureEntity = (StructureEntity) entity;
-            IBlockState state = structureEntity.structureWorld.getBlockState(message.position);
-            StructurePlayerHandler playerHandler = structureEntity.getPlayerHandler(player);
-            if (message.breakState == BreakState.BREAK) {
-                if (player.capabilities.isCreativeMode || (playerHandler.getBreaking() != null && playerHandler.getBreakProgress() >= 1.0F)) {
-                    structureEntity.structureWorld.setBlockState(message.position, Blocks.AIR.getDefaultState());
-                }
-            } else if (message.breakState == BreakState.START) {
-                playerHandler.startBreaking(message.position);
-            } else {
-                playerHandler.startBreaking(null);
-            }
-        }
-    }
-
-    @Override
-    public void fromBytes(ByteBuf buf) {
+    public void deserialize(ByteBuf buf) {
         this.entity = buf.readInt();
         this.position = BlockPos.fromLong(buf.readLong());
         this.breakState = BreakState.values()[buf.readByte()];
     }
 
     @Override
-    public void toBytes(ByteBuf buf) {
-        buf.writeInt(this.entity);
-        buf.writeLong(this.position.toLong());
-        buf.writeByte(this.breakState.ordinal());
+    public void onReceiveClient(Minecraft client, WorldClient world, EntityPlayerSP player, MessageContext context) {
+
+    }
+
+    @Override
+    public void onReceiveServer(MinecraftServer server, WorldServer world, EntityPlayerMP player, MessageContext context) {
+        Entity entity = player.worldObj.getEntityByID(this.entity);
+        if (entity instanceof StructureEntity) {
+            StructureEntity structureEntity = (StructureEntity) entity;
+            StructurePlayerHandler playerHandler = structureEntity.getPlayerHandler(player);
+            if (this.breakState == BreakState.BREAK) {
+                if (player.capabilities.isCreativeMode || ((playerHandler.getBreaking() != null && playerHandler.getBreakProgress() >= 1.0F) || playerHandler.getLastBroken() != null)) {
+                    playerHandler.breakBlock(this.position);
+                    playerHandler.startBreaking(null);
+                    playerHandler.clearLastBroken();
+                }
+            } else if (this.breakState == BreakState.START) {
+                playerHandler.startBreaking(this.position);
+                structureEntity.structureWorld.getBlockState(this.position).getBlock().onBlockClicked(structureEntity.structureWorld, this.position, player);
+            } else {
+                playerHandler.startBreaking(null);
+            }
+        }
     }
 
     public enum BreakState {

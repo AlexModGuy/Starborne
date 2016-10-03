@@ -1,17 +1,18 @@
 package net.starborne.server.message;
 
 import io.netty.buffer.ByteBuf;
-import net.ilexiconn.llibrary.server.network.AbstractMessage;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
 import net.starborne.server.entity.structure.StructureEntity;
 
-public class PlayEventEntityMessage extends AbstractMessage<PlayEventEntityMessage> {
+public class PlayEventEntityMessage extends BaseMessage {
     private int entity;
     private BlockPos position;
     private int type;
@@ -30,33 +31,7 @@ public class PlayEventEntityMessage extends AbstractMessage<PlayEventEntityMessa
     }
 
     @Override
-    public void onClientReceived(Minecraft client, PlayEventEntityMessage message, EntityPlayer player, MessageContext context) {
-        Entity entity = player.worldObj.getEntityByID(message.entity);
-        if (entity instanceof StructureEntity) {
-            StructureEntity structureEntity = (StructureEntity) entity;
-            if (message.broadcast) {
-                structureEntity.structureWorld.playBroadcastSound(message.type, message.position, message.data);
-            } else {
-                structureEntity.structureWorld.playEventServer(null, message.type, message.position, message.data);
-            }
-        }
-    }
-
-    @Override
-    public void onServerReceived(MinecraftServer server, PlayEventEntityMessage message, EntityPlayer player, MessageContext context) {
-    }
-
-    @Override
-    public void fromBytes(ByteBuf buf) {
-        this.entity = buf.readInt();
-        this.position = BlockPos.fromLong(buf.readLong());
-        this.type = buf.readInt();
-        this.data = buf.readInt();
-        this.broadcast = buf.readBoolean();
-    }
-
-    @Override
-    public void toBytes(ByteBuf buf) {
+    public void serialize(ByteBuf buf) {
         buf.writeInt(this.entity);
         buf.writeLong(this.position.toLong());
         buf.writeInt(this.type);
@@ -65,7 +40,28 @@ public class PlayEventEntityMessage extends AbstractMessage<PlayEventEntityMessa
     }
 
     @Override
-    public boolean registerOnSide(Side side) {
-        return side.isClient();
+    public void deserialize(ByteBuf buf) {
+        this.entity = buf.readInt();
+        this.position = BlockPos.fromLong(buf.readLong());
+        this.type = buf.readInt();
+        this.data = buf.readInt();
+        this.broadcast = buf.readBoolean();
+    }
+
+    @Override
+    public void onReceiveClient(Minecraft client, WorldClient world, EntityPlayerSP player, MessageContext context) {
+        Entity entity = player.worldObj.getEntityByID(this.entity);
+        if (entity instanceof StructureEntity) {
+            StructureEntity structureEntity = (StructureEntity) entity;
+            if (this.broadcast) {
+                structureEntity.structureWorld.playBroadcastSound(this.type, this.position, this.data);
+            } else {
+                structureEntity.structureWorld.playEventServer(null, this.type, this.position, this.data);
+            }
+        }
+    }
+
+    @Override
+    public void onReceiveServer(MinecraftServer server, WorldServer world, EntityPlayerMP player, MessageContext context) {
     }
 }

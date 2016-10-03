@@ -144,34 +144,32 @@ public class RenderedChunk {
                 hasBreak = tile != null && tile.canRenderBreaking();
             }
             if (!hasBreak) {
-                GlStateManager.pushMatrix();
-                RenderHelper.disableStandardItemLighting();
-                MC.entityRenderer.disableLightmap();
-                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
-                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
                 Tessellator tessellator = Tessellator.getInstance();
                 net.minecraft.client.renderer.VertexBuffer builder = tessellator.getBuffer();
                 GlStateManager.enableBlend();
-                GlStateManager.enableAlpha();
-                GlStateManager.alphaFunc(516, 0.1F);
-                GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F);
-                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.depthMask(false);
+                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
                 GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F);
                 GlStateManager.doPolygonOffset(-3.0F, -3.0F);
                 GlStateManager.enablePolygonOffset();
-                GlStateManager.depthMask(false);
+                GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+                GlStateManager.enableAlpha();
+                GlStateManager.pushMatrix();
+                RenderHelper.disableStandardItemLighting();
                 builder.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
                 builder.noColor();
                 BLOCK_RENDERER_DISPATCHER.renderBlockDamage(state, breaking, this.destroyStages[breakProgress], this.entity.structureWorld);
                 tessellator.draw();
+                GlStateManager.disableAlpha();
                 GlStateManager.doPolygonOffset(0.0F, 0.0F);
                 GlStateManager.disablePolygonOffset();
-                GlStateManager.disableBlend();
+                GlStateManager.disableOutlineMode();
                 GlStateManager.depthMask(true);
-                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
-                GlStateManager.popMatrix();
                 RenderHelper.enableStandardItemLighting();
-                MC.entityRenderer.enableLightmap();
+                GlStateManager.popMatrix();
+                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
+                GlStateManager.disableBlend();
             }
         }
     }
@@ -179,6 +177,8 @@ public class RenderedChunk {
     public void renderLayer(BlockRenderLayer layer) {
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.enableBlend();
+        } else if (layer == BlockRenderLayer.CUTOUT_MIPPED) {
+            TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
         }
         Lock lock = this.renderLayerLocks[layer.ordinal()];
 //        lock.lock();
@@ -193,6 +193,8 @@ public class RenderedChunk {
         GlStateManager.resetColor();
         if (layer == BlockRenderLayer.TRANSLUCENT) {
             GlStateManager.disableBlend();
+        } else if (layer == BlockRenderLayer.CUTOUT_MIPPED) {
+            TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
         }
     }
 

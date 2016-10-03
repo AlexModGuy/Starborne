@@ -14,7 +14,6 @@ apply plugin: "net.minecraftforge.gradle.forge"
 
 def mod_file = getModFile()
 version = getVersion("VERSION", mod_file)
-def llibrary_version = getVersion("LLIBRARY_VERSION", mod_file)
 group = "net.starborne"
 archivesBaseName = "Starborne"
 sourceCompatibility = targetCompatibility = "1.8"
@@ -27,14 +26,9 @@ minecraft {
 
 repositories {
 	mavenCentral()
-	maven {
-		name = "ilexiconn"
-		url = "http://maven.ilexiconn.net"
-	}
 }
 
 dependencies {
-    compile "net.ilexiconn:llibrary:$llibrary_version-1.10.2:dev"
 }
 
 processResources {
