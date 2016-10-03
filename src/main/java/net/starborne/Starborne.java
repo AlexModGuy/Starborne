@@ -45,7 +45,7 @@ public class Starborne {
             FMLCommonHandler.instance().exitJava(1, false);
         }
 
-        Starborne.registerMessage(BreakBlockEntityMessage.class, Side.SERVER);
+        Starborne.registerMessage(BreakBlockEntityMessage.class, Side.SERVER, Side.CLIENT);
         Starborne.registerMessage(EntityChunkMessage.class, Side.CLIENT);
         Starborne.registerMessage(InteractBlockEntityMessage.class, Side.SERVER);
         Starborne.registerMessage(PlayEventEntityMessage.class, Side.CLIENT);

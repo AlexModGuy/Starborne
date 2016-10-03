@@ -9,33 +9,26 @@ import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.StructurePlayerHandler;
 
-import java.util.ArrayDeque;
 import java.util.Map;
-import java.util.Queue;
 
 public class ClientStructureHandler extends ServerStructureHandler {
     private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
 
     private StructureEntity mousedOver;
-    private Queue<StructureEntity> queuedPlayerHandlers = new ArrayDeque<>();
 
     @Override
     public void update(World world) {
         super.update(world);
 
-        EntityPlayerSP player = MINECRAFT.thePlayer;
+        EntityPlayerSP clientPlayer = MINECRAFT.thePlayer;
 
-        if (player != null) {
-            while (this.queuedPlayerHandlers.size() > 0) {
-                this.queuedPlayerHandlers.poll().addPlayerHandler(MINECRAFT.thePlayer);
-            }
-
-            Map.Entry<StructureEntity, RayTraceResult> mouseOver = this.getSelectedBlock(player);
+        if (clientPlayer != null) {
+            Map.Entry<StructureEntity, RayTraceResult> mouseOver = this.getSelectedBlock(clientPlayer);
 
             StructureEntity currentMousedOver = mouseOver != null ? mouseOver.getKey() : null;
 
             if (mouseOver != null) {
-                StructurePlayerHandler mouseOverHandler = this.get(mouseOver.getKey(), player);
+                StructurePlayerHandler mouseOverHandler = this.get(mouseOver.getKey(), clientPlayer);
                 if (mouseOverHandler != null) {
                     RayTraceResult prevMouseOver = mouseOverHandler.getMouseOver();
                     mouseOverHandler.setMouseOver(mouseOver.getValue());
@@ -46,7 +39,7 @@ public class ClientStructureHandler extends ServerStructureHandler {
             }
 
             if (this.mousedOver != null && this.mousedOver != currentMousedOver) {
-                StructurePlayerHandler mouseOverHandler = this.get(this.mousedOver, player);
+                StructurePlayerHandler mouseOverHandler = this.get(this.mousedOver, clientPlayer);
                 if (mouseOverHandler != null) {
                     mouseOverHandler.startBreaking(null);
                     mouseOverHandler.setMouseOver(null);
@@ -57,7 +50,7 @@ public class ClientStructureHandler extends ServerStructureHandler {
 
             if (this.mousedOver != null && !MINECRAFT.gameSettings.keyBindAttack.isKeyDown()) {
                 if (this.mousedOver != null) {
-                    StructurePlayerHandler mouseOverHandler = this.get(this.mousedOver, player);
+                    StructurePlayerHandler mouseOverHandler = this.get(this.mousedOver, clientPlayer);
                     if (mouseOverHandler != null) {
                         mouseOverHandler.startBreaking(null);
                     }
@@ -65,7 +58,7 @@ public class ClientStructureHandler extends ServerStructureHandler {
             }
 
             if (this.mousedOver != null && MINECRAFT.gameSettings.keyBindPickBlock.isKeyDown()) {
-                StructurePlayerHandler handler = this.get(this.mousedOver, player);
+                StructurePlayerHandler handler = this.get(this.mousedOver, clientPlayer);
                 if (handler != null) {
                     handler.onPickBlock();
                 }
@@ -79,9 +72,25 @@ public class ClientStructureHandler extends ServerStructureHandler {
     }
 
     @Override
+    public void addPlayer(EntityPlayer player) {
+        for (StructureEntity structure : this.structures) {
+            structure.addPlayerHandler(player);
+        }
+    }
+
+    @Override
+    public void removePlayer(EntityPlayer player) {
+        for (StructureEntity structure : this.structures) {
+            structure.removePlayerHandler(player);
+        }
+    }
+
+    @Override
     public void addEntity(StructureEntity entity) {
         super.addEntity(entity);
-        this.queuedPlayerHandlers.add(entity);
+        for (EntityPlayer player : entity.worldObj.playerEntities) {
+            entity.addPlayerHandler(player);
+        }
     }
 
     @Override

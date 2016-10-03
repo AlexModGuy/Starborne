@@ -64,4 +64,8 @@ public class ServerProxy {
     public ServerStructureHandler getStructureHandler(World world) {
         return STRUCTURE_HANDLER;
     }
+
+    public boolean isClientPlayer(EntityPlayer player) {
+        return false;
+    }
 }

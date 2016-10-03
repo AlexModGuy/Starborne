@@ -120,7 +120,9 @@ public class StructurePlayerHandler {
             if (this.player.capabilities.isCreativeMode) {
                 this.breakBlock(pos);
             } else if (!this.isHittingBlock || this.breaking == null) {
-                Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.START));
+                if (Starborne.PROXY.isClientPlayer(this.player)) {
+                    Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.player, this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.START));
+                }
                 IBlockState state = this.entity.structureWorld.getBlockState(pos);
                 boolean realBlock = state.getMaterial() != Material.AIR;
                 if (realBlock && this.breakProgress == 0.0F) {
@@ -157,18 +159,20 @@ public class StructurePlayerHandler {
                     this.breakSoundTimer++;
                     if (this.breakProgress >= 1.0F) {
                         this.isHittingBlock = false;
-                        Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), this.breaking, BreakBlockEntityMessage.BreakState.STOP));
-                        this.breakBlock(this.breaking);
+                        if (Starborne.PROXY.isClientPlayer(this.player)) {
+                            this.breakBlock(this.breaking);
+                        }
                         this.breakProgress = 0.0F;
                         this.breakSoundTimer = 0.0F;
                         this.interactCooldown = 5;
                     }
                 } else {
-                    if (this.breakProgress >= 1.0F) {
+                    if (this.breakProgress >= 0.9F) {
+                        BlockPos pos = this.breaking;
                         this.startBreaking(null);
                         this.isHittingBlock = false;
                         this.breakProgress = 0.0F;
-                        this.lastBroken = this.breaking;
+                        this.lastBroken = pos;
                     }
                 }
                 return true;
@@ -182,7 +186,9 @@ public class StructurePlayerHandler {
         Block block = state.getBlock();
         if (this.entity.worldObj.isRemote) {
             this.entity.structureWorld.playEvent(2001, pos, Block.getStateId(state));
-            Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.BREAK));
+            if (Starborne.PROXY.isClientPlayer(this.player)) {
+                Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.player, this.entity.getEntityId(), pos, BreakBlockEntityMessage.BreakState.BREAK));
+            }
         }
         if (!this.player.capabilities.isCreativeMode) {
             ItemStack heldItem = this.player.getHeldItemMainhand();
@@ -261,8 +267,14 @@ public class StructurePlayerHandler {
     }
 
     public void startBreaking(BlockPos position) {
-        this.clearLastBroken();
+        if (position != null) {
+            this.clearLastBroken();
+        }
+        if (position == null && this.breaking != null && Starborne.PROXY.isClientPlayer(this.player)) {
+            Starborne.NETWORK_WRAPPER.sendToServer(new BreakBlockEntityMessage(this.player, this.entity.getEntityId(), null, BreakBlockEntityMessage.BreakState.STOP));
+        }
         this.breaking = position;
+        this.isHittingBlock = true;
         this.breakProgress = 0.0F;
     }
 

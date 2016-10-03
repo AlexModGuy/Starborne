@@ -100,4 +100,9 @@ public class ClientProxy extends ServerProxy {
             super.handleMessage(message, context);
         }
     }
+
+    @Override
+    public boolean isClientPlayer(EntityPlayer player) {
+        return player == MINECRAFT.thePlayer;
+    }
 }

@@ -130,7 +130,7 @@ public class ServerStructureHandler {
         this.structures.add(entity);
     }
 
-    public void clearEntities() {
+    public void unloadWorld() {
         this.structures.clear();
     }
 
@@ -149,6 +149,12 @@ public class ServerStructureHandler {
 
     public StructurePlayerHandler get(StructureEntity entity, EntityPlayer player) {
         return entity != null ? entity.getPlayerHandlers().get(player) : null;
+    }
+
+    public void addPlayer(EntityPlayer player) {
+    }
+
+    public void removePlayer(EntityPlayer player) {
     }
 
     public boolean isServer() {

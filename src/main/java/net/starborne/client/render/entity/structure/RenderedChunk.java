@@ -21,13 +21,12 @@ import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.renderer.vertex.VertexBuffer;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.math.BlockPos;
-import net.starborne.Starborne;
-import net.starborne.server.ServerStructureHandler;
 import net.starborne.server.entity.structure.EntityChunk;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.StructurePlayerHandler;
@@ -114,15 +113,12 @@ public class RenderedChunk {
     }
 
     public void render(float partialTicks) {
-        int breakProgress = 0;
-        BlockPos breaking = null;
-        ServerStructureHandler structureHandler = Starborne.PROXY.getStructureHandler(this.entity.worldObj);
-        StructurePlayerHandler handler = structureHandler.get(this.entity, MC.thePlayer);
-        if (handler != null) {
+        Map<BlockPos, Integer> breaking = new HashMap<>();
+        for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.entity.getPlayerHandlers().entrySet()) {
+            StructurePlayerHandler handler = entry.getValue();
             BlockPos pos = handler.getBreaking();
             if (pos != null) {
-                breakProgress = (int) ((handler.getBreakProgress() * 10.0F));
-                breaking = pos;
+                breaking.put(pos, (int) (handler.getBreakProgress() * 10.0F));
             }
         }
         for (Map.Entry<TileEntity, TileEntitySpecialRenderer<TileEntity>> renderer : this.specialRenderers.entrySet()) {
@@ -130,46 +126,52 @@ public class RenderedChunk {
             TileEntitySpecialRenderer<TileEntity> value = renderer.getValue();
             BlockPos position = tile.getPos();
             value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, -1);
-            if (position.equals(breaking)) {
-                value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, breakProgress);
+            if (breaking.containsKey(position)) {
+                value.renderTileEntityAt(tile, position.getX(), position.getY(), position.getZ(), partialTicks, breaking.get(position));
             }
             TEXTURE_MANAGER.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
         }
-        if (breaking != null) {
-            IBlockState state = this.entity.structureWorld.getBlockState(breaking);
-            Block block = state.getBlock();
-            TileEntity tile = this.entity.structureWorld.getTileEntity(breaking);
-            boolean hasBreak = block instanceof BlockChest || block instanceof BlockEnderChest || block instanceof BlockSign || block instanceof BlockSkull;
-            if (!hasBreak) {
-                hasBreak = tile != null && tile.canRenderBreaking();
+        if (breaking.size() > 0) {
+            Tessellator tessellator = Tessellator.getInstance();
+            net.minecraft.client.renderer.VertexBuffer builder = tessellator.getBuffer();
+            GlStateManager.enableBlend();
+            GlStateManager.depthMask(false);
+            TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
+            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F);
+            GlStateManager.doPolygonOffset(-3.0F, -3.0F);
+            GlStateManager.enablePolygonOffset();
+            GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+            GlStateManager.enableAlpha();
+            GlStateManager.pushMatrix();
+            RenderHelper.disableStandardItemLighting();
+            builder.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+            builder.noColor();
+
+            for (Map.Entry<BlockPos, Integer> entry : breaking.entrySet()) {
+                BlockPos pos = entry.getKey();
+                IBlockState state = this.entity.structureWorld.getBlockState(pos);
+                Block block = state.getBlock();
+                TileEntity tile = this.entity.structureWorld.getTileEntity(pos);
+                boolean hasBreak = block instanceof BlockChest || block instanceof BlockEnderChest || block instanceof BlockSign || block instanceof BlockSkull;
+                if (!hasBreak) {
+                    hasBreak = tile != null && tile.canRenderBreaking();
+                }
+                if (!hasBreak) {
+                    BLOCK_RENDERER_DISPATCHER.renderBlockDamage(state, pos, this.destroyStages[entry.getValue()], this.entity.structureWorld);
+                }
             }
-            if (!hasBreak) {
-                Tessellator tessellator = Tessellator.getInstance();
-                net.minecraft.client.renderer.VertexBuffer builder = tessellator.getBuffer();
-                GlStateManager.enableBlend();
-                GlStateManager.depthMask(false);
-                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
-                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-                GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F);
-                GlStateManager.doPolygonOffset(-3.0F, -3.0F);
-                GlStateManager.enablePolygonOffset();
-                GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
-                GlStateManager.enableAlpha();
-                GlStateManager.pushMatrix();
-                RenderHelper.disableStandardItemLighting();
-                builder.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
-                builder.noColor();
-                BLOCK_RENDERER_DISPATCHER.renderBlockDamage(state, breaking, this.destroyStages[breakProgress], this.entity.structureWorld);
-                tessellator.draw();
-                GlStateManager.disableAlpha();
-                GlStateManager.doPolygonOffset(0.0F, 0.0F);
-                GlStateManager.disablePolygonOffset();
-                GlStateManager.depthMask(true);
-                RenderHelper.enableStandardItemLighting();
-                GlStateManager.popMatrix();
-                TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
-                GlStateManager.disableBlend();
-            }
+
+            tessellator.draw();
+            GlStateManager.doPolygonOffset(0.0F, 0.0F);
+            GlStateManager.disablePolygonOffset();
+            GlStateManager.depthMask(true);
+            RenderHelper.enableStandardItemLighting();
+            GlStateManager.popMatrix();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            TEXTURE_MANAGER.getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            GlStateManager.disableAlpha();
         }
     }
 

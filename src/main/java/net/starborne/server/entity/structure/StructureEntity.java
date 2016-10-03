@@ -28,8 +28,8 @@ public class StructureEntity extends Entity {
 
     private Map<EntityPlayer, StructurePlayerHandler> playerHandlers;
 
-    private Matrix transformMatrix = new Matrix(3);
-    private Matrix untransformMatrix = new Matrix(3);
+    private Matrix transformMatrix;
+    private Matrix untransformMatrix;
 
     private boolean deserializing;
 
@@ -50,6 +50,7 @@ public class StructureEntity extends Entity {
             this.structureWorld.setBlockState(new BlockPos(0, 0, 0), Blocks.STONE.getDefaultState());
             this.structureWorld.updateChunkQueue();
         }
+        this.recalculateMatrices();
     }
 
     @Override
@@ -78,16 +79,28 @@ public class StructureEntity extends Entity {
 //        this.rotationYaw += 0.1F;
 
         if (this.posX != this.prevPosX || this.posY != this.prevPosY || this.posZ != this.prevPosZ || this.rotationYaw != this.prevRotationYaw || this.rotationPitch != this.prevRotationPitch || this.rotationRoll != this.prevRotationRoll) {
-            this.transformMatrix.setIdentity();
-            this.transformMatrix.translate(this.posX, this.posY, this.posZ);
-            this.transformMatrix.rotate(Math.toRadians(this.rotationYaw), 0.0F, 1.0F, 0.0F);
-            this.transformMatrix.rotate(Math.toRadians(this.rotationPitch), 1.0F, 0.0F, 0.0F);
-            this.transformMatrix.rotate(Math.toRadians(this.rotationRoll), 0.0F, 0.0F, 1.0F);
-
-            this.untransformMatrix.setIdentity();
-            this.untransformMatrix.multiply(this.transformMatrix);
-            this.untransformMatrix.invert();
+            this.recalculateMatrices();
         }
+    }
+
+    private void recalculateMatrices() {
+        if (this.transformMatrix == null) {
+            this.transformMatrix = new Matrix(3);
+        }
+
+        if (this.untransformMatrix == null) {
+            this.untransformMatrix = new Matrix(3);
+        }
+
+        this.transformMatrix.setIdentity();
+        this.transformMatrix.translate(this.posX, this.posY, this.posZ);
+        this.transformMatrix.rotate(Math.toRadians(this.rotationYaw), 0.0F, 1.0F, 0.0F);
+        this.transformMatrix.rotate(Math.toRadians(this.rotationPitch), 1.0F, 0.0F, 0.0F);
+        this.transformMatrix.rotate(Math.toRadians(this.rotationRoll), 0.0F, 0.0F, 1.0F);
+
+        this.untransformMatrix.setIdentity();
+        this.untransformMatrix.multiply(this.transformMatrix);
+        this.untransformMatrix.invert();
     }
 
     @Override
@@ -103,6 +116,7 @@ public class StructureEntity extends Entity {
             this.structureWorld.setChunk(position, chunk);
         }
         this.deserializing = false;
+        this.recalculateMatrices();
     }
 
     @Override
@@ -182,6 +196,10 @@ public class StructureEntity extends Entity {
 
     public void addPlayerHandler(EntityPlayer player) {
         this.playerHandlers.put(player, new StructurePlayerHandler(this, player));
+    }
+
+    public void removePlayerHandler(EntityPlayer player) {
+        this.playerHandlers.remove(player);
     }
 
     public StructurePlayerHandler getPlayerHandler(EntityPlayer player) {

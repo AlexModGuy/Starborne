@@ -7,8 +7,10 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -55,14 +57,26 @@ public class ClientEventHandler {
     @SubscribeEvent
     public void onEntityJoinWorld(EntityJoinWorldEvent event) {
         Entity entity = event.getEntity();
+        World world = event.getWorld();
+        ServerStructureHandler structureHandler = Starborne.PROXY.getStructureHandler(world);
         if (entity instanceof StructureEntity) {
-            Starborne.PROXY.getStructureHandler(event.getWorld()).addEntity((StructureEntity) entity);
+            structureHandler.addEntity((StructureEntity) entity);
+        } else if (entity instanceof EntityPlayer) {
+            structureHandler.addPlayer((EntityPlayer) entity);
+        }
+    }
+
+    @SubscribeEvent
+    public void onLivingDeath(LivingDeathEvent event) {
+        Entity entity = event.getEntity();
+        if (entity instanceof EntityPlayer) {
+            Starborne.PROXY.getStructureHandler(entity.worldObj).removePlayer((EntityPlayer) entity);
         }
     }
 
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
-        Starborne.PROXY.getStructureHandler(event.getWorld()).clearEntities();
+        Starborne.PROXY.getStructureHandler(event.getWorld()).unloadWorld();
     }
 
     @SubscribeEvent
