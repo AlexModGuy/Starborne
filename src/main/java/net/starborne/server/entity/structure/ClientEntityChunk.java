@@ -42,8 +42,8 @@ public class ClientEntityChunk extends EntityChunk {
     }
 
     @Override
-    public void unload() {
-        super.unload();
+    public void remove() {
+        super.remove();
         this.renderedChunk.delete();
     }
 

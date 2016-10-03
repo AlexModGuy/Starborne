@@ -563,7 +563,7 @@ public class StructureWorld extends World {
         }
         boolean success = chunk.setBlockState(this.getPositionInChunk(pos), state);
         if (chunk.isEmpty()) {
-            chunk.unload();
+            chunk.remove();
             this.queuedChunks.add(new StructureWorld.ChunkQueue(chunkPosition, chunk, true));
         }
         for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.entity.getPlayerHandlers().entrySet()) {
@@ -631,7 +631,7 @@ public class StructureWorld extends World {
         EntityChunk previous = this.getChunks().get(position);
         this.queuedChunks.add(new ChunkQueue(position, chunk, false));
         if (previous != null) {
-            previous.unload();
+            previous.remove();
             for (Map.Entry<EntityPlayer, StructurePlayerHandler> entry : this.entity.getPlayerHandlers().entrySet()) {
                 entry.getValue().remove(previous);
             }

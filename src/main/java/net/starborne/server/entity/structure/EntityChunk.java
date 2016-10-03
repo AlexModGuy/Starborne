@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.BlockStateContainer;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.util.Constants;
+import net.starborne.server.world.data.StarborneWorldSavedData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +37,8 @@ public class EntityChunk {
     protected int updatePosition = new Random().nextInt();
 
     protected boolean loading;
+
+    protected BlockPos partionPosition;
 
     public EntityChunk(StructureEntity entity, BlockPos position) {
         this.entity = entity;
@@ -93,6 +96,9 @@ public class EntityChunk {
             block.onBlockAdded(this.structureWorld, globalPosition, state);
         }
         this.structureWorld.markAndNotifyBlock(globalPosition, null, previousState, state, flags);
+        if (this.partionPosition != null) {
+            this.mainWorld.setBlockState(position.add(this.partionPosition.getX() << 4, this.partionPosition.getY() << 4, this.partionPosition.getZ() << 4), state);
+        }
         return previousState != state;
     }
 
@@ -132,9 +138,16 @@ public class EntityChunk {
 
     public void serialize(NBTTagCompound compound) {
         EntityChunk.serializeData(compound, this.stateData);
+        if (this.partionPosition != null) {
+            compound.setLong("PartionPosition", this.partionPosition.toLong());
+        }
     }
 
     public void deserialize(NBTTagCompound compound) {
+        if (compound.hasKey("PartionPosition")) {
+            this.partionPosition = BlockPos.fromLong(compound.getLong("PartionPosition"));
+            this.clearSpace();
+        }
         this.loading = true;
         this.blockCount = 0;
         this.tickedBlockCount = 0;
@@ -203,11 +216,37 @@ public class EntityChunk {
         return data;
     }
 
-    public void unload() {
+    public void remove() {
+        World world = this.entity.worldObj;
+        if (!world.isRemote) {
+            StarborneWorldSavedData data = StarborneWorldSavedData.get(world);
+            data.unoccupyChunk(this.partionPosition);
+            this.clearSpace();
+        }
+    }
+
+    private void clearSpace() {
+        World world = this.entity.worldObj;
+        int offsetX = this.partionPosition.getX() << 4;
+        int offsetY = this.partionPosition.getY() << 4;
+        int offsetZ = this.partionPosition.getZ() << 4;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                for (int z = 0; z < 16; z++) {
+                    pos.setPos(offsetX + x, offsetY + y, offsetZ + z);
+                    world.setBlockState(pos, Blocks.AIR.getDefaultState());
+                }
+            }
+        }
     }
 
     public void update() {
         if (!this.mainWorld.isRemote) {
+            if (this.partionPosition == null) {
+                this.partionPosition = ChunkPartionHandler.generateValidPartionPosition(this.mainWorld);
+                this.clearSpace();
+            }
             if (this.tickedBlockCount > 0) {
                 int tickSpeed = this.mainWorld.getGameRules().getInt("randomTickSpeed");
                 for (int i = 0; i < tickSpeed; i++) {
