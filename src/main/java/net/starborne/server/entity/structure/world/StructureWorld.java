@@ -54,6 +54,9 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 public class StructureWorld extends World {
+    public static final int MAX_SIZE = 128;
+    public static final int HALF_SIZE = MAX_SIZE / 2;
+
     public static StructureWorld transforming;
 
     protected StructureEntity entity;
@@ -91,22 +94,26 @@ public class StructureWorld extends World {
 
     @Override
     public void markAndNotifyBlock(BlockPos pos, Chunk chunk, IBlockState oldState, IBlockState newState, int flags) {
-        if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && this.getChunkForBlock(pos) == null) {
-            this.notifyBlockUpdate(pos, oldState, newState, flags);
-        }
-        if (!this.isRemote && (flags & 1) != 0) {
-            this.notifyNeighborsRespectDebug(pos, oldState.getBlock());
-            if (newState.hasComparatorInputOverride()) {
-                this.updateComparatorOutputLevel(pos, newState.getBlock());
+        if (this.isValid(pos)) {
+            if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && this.getChunkForBlock(pos) == null) {
+                this.notifyBlockUpdate(pos, oldState, newState, flags);
+            }
+            if (!this.isRemote && (flags & 1) != 0) {
+                this.notifyNeighborsRespectDebug(pos, oldState.getBlock());
+                if (newState.hasComparatorInputOverride()) {
+                    this.updateComparatorOutputLevel(pos, newState.getBlock());
+                }
             }
         }
     }
 
     @Override
     public IBlockState getBlockState(BlockPos pos) {
-        EntityChunk chunk = this.getChunk(this.getChunkPosition(pos));
-        if (chunk != null) {
-            return chunk.getBlockState(this.getPositionInChunk(pos));
+        if (this.isValid(pos)) {
+            EntityChunk chunk = this.getChunk(this.getChunkPosition(pos));
+            if (chunk != null) {
+                return chunk.getBlockState(this.getPositionInChunk(pos));
+            }
         }
         return Blocks.AIR.getDefaultState();
     }
@@ -148,12 +155,18 @@ public class StructureWorld extends World {
 
     @Override
     public boolean isAirBlock(BlockPos pos) {
+        if (!this.isValid(pos)) {
+            return true;
+        }
         IBlockState state = this.getBlockState(pos);
         return state.getBlock().isAir(state, this, pos);
     }
 
     @Override
     public TileEntity getTileEntity(BlockPos pos) {
+        if (!this.isValid(pos)) {
+            return null;
+        }
         EntityChunk chunk = this.getChunkForBlock(pos);
         if (chunk != null && !chunk.isEmpty()) {
             return chunk.getTileEntity(this.getPositionInChunk(pos));
@@ -521,7 +534,7 @@ public class StructureWorld extends World {
     @Override
     public boolean isSideSolid(BlockPos pos, EnumFacing side, boolean _default) {
         EntityChunk chunk = this.getChunkForBlock(pos);
-        if (chunk == null || chunk.isEmpty()) {
+        if (chunk == null || chunk.isEmpty() || !this.isValid(pos.offset(side))) {
             return _default;
         }
         return this.getBlockState(pos).isSideSolid(this, pos, side);
@@ -529,6 +542,9 @@ public class StructureWorld extends World {
 
     @Override
     public boolean setBlockState(BlockPos pos, IBlockState state) {
+        if (!this.isValid(pos)) {
+            return false;
+        }
         BlockPos chunkPosition = this.getChunkPosition(pos);
         EntityChunk chunk = this.chunks.get(chunkPosition);
         if (chunk == null) {
@@ -620,6 +636,10 @@ public class StructureWorld extends World {
                 entry.getValue().remove(previous);
             }
         }
+    }
+
+    public boolean isValid(BlockPos pos) {
+        return pos.getX() <= HALF_SIZE && pos.getX() >= -HALF_SIZE && pos.getY() <= HALF_SIZE && pos.getY() >= -HALF_SIZE && pos.getZ() <= HALF_SIZE && pos.getZ() >= -HALF_SIZE;
     }
 
     private class ChunkQueue {

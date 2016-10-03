@@ -82,10 +82,11 @@ public class EntityChunk {
         }
         this.stateData.set(x, y, z, state);
         BlockPos position = new BlockPos(x, y, z);
+        if (previousBlock.hasTileEntity(state)) {
+            this.removeTileEntity(position);
+        }
         if (block.hasTileEntity(state)) {
             this.addTileEntity(block.createTileEntity(this.structureWorld, state), position);
-        } else if (previousBlock.hasTileEntity(state)) {
-            this.removeTileEntity(position);
         }
         BlockPos globalPosition = position.add(this.position.getX() << 4, this.position.getY() << 4, this.position.getZ() << 4);
         if (!this.structureWorld.isRemote && previousBlock != block && !(block.hasTileEntity(state) || this.loading)) {
@@ -210,10 +211,10 @@ public class EntityChunk {
             if (this.tickedBlockCount > 0) {
                 int tickSpeed = this.mainWorld.getGameRules().getInt("randomTickSpeed");
                 for (int i = 0; i < tickSpeed; i++) {
-                    int position = this.updatePosition * 15 + 0x5FD8AC;
-                    int x = position & 15;
-                    int y = position >> 8 & 15;
-                    int z = position >> 16 & 15;
+                    this.updatePosition = this.updatePosition * 15 + 0x5FD8AC;
+                    int x = this.updatePosition & 15;
+                    int y = this.updatePosition >> 8 & 15;
+                    int z = this.updatePosition >> 16 & 15;
                     IBlockState state = this.stateData.get(x, y, z);
                     Block block = state.getBlock();
                     if (block.getTickRandomly()) {
@@ -229,11 +230,13 @@ public class EntityChunk {
     }
 
     protected void addTileEntity(TileEntity tileEntity, BlockPos position) {
-        this.tileEntities.put(position, tileEntity);
-        tileEntity.setWorldObj(this.structureWorld);
-        tileEntity.setPos(new BlockPos((this.position.getX() << 4) + position.getX(), (this.position.getY() << 4) + position.getY(), (this.position.getZ() << 4) + position.getZ()));
-        if (tileEntity instanceof ITickable) {
-            this.tickables.add((ITickable) tileEntity);
+        if (tileEntity != null) {
+            this.tileEntities.put(position, tileEntity);
+            tileEntity.setWorldObj(this.structureWorld);
+            tileEntity.setPos(new BlockPos((this.position.getX() << 4) + position.getX(), (this.position.getY() << 4) + position.getY(), (this.position.getZ() << 4) + position.getZ()));
+            if (tileEntity instanceof ITickable) {
+                this.tickables.add((ITickable) tileEntity);
+            }
         }
     }
 

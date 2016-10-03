@@ -12,6 +12,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.event.ForgeEventFactory;
+import net.starborne.Starborne;
 import net.starborne.server.entity.structure.StructureEntity;
 import net.starborne.server.entity.structure.StructurePlayerHandler;
 
@@ -43,37 +44,34 @@ public class ServerStructureHandler {
     }
 
     public boolean onItemRightClick(EntityPlayer player, EnumHand hand) {
-        if (!this.interact(this.get(this.getMousedOver(player), player), player, hand)) {
-            ItemStack heldItem = player.getHeldItem(hand);
-            if (heldItem != null) {
-                int prevSize = heldItem.stackSize;
-                ActionResult<ItemStack> result = heldItem.useItemRightClick(player.worldObj, player, hand);
-                if (result.getType() != EnumActionResult.SUCCESS) {
-                    for (Entity entity : player.worldObj.loadedEntityList) {
-                        if (entity instanceof StructureEntity) {
-                            StructureEntity structure = (StructureEntity) entity;
-                            result = heldItem.useItemRightClick(structure.structureWorld, player, hand);
-                            if (result.getType() == EnumActionResult.SUCCESS) {
-                                break;
-                            }
-                        }
-                    }
-                }
-                ItemStack output = result.getResult();
-                if (output != heldItem || output.stackSize != prevSize) {
-                    if (player.capabilities.isCreativeMode && output.stackSize < prevSize) {
-                        output.stackSize = prevSize;
-                    }
-                    player.setHeldItem(hand, output);
-                    if (output.stackSize <= 0) {
-                        player.setHeldItem(hand, null);
-                        ForgeEventFactory.onPlayerDestroyItem(player, output, hand);
+        boolean success = false;
+        success |= this.interact(this.get(this.getMousedOver(player), player), player, hand);
+        ItemStack heldItem = player.getHeldItem(hand);
+        if (heldItem != null) {
+            int prevSize = heldItem.stackSize;
+            ActionResult<ItemStack> result = heldItem.useItemRightClick(player.worldObj, player, hand);
+            if (result.getType() != EnumActionResult.SUCCESS) {
+                for (StructureEntity entity : Starborne.PROXY.getStructureHandler(player.worldObj).getStructures()) {
+                    result = heldItem.useItemRightClick(entity.structureWorld, player, hand);
+                    if (result.getType() == EnumActionResult.SUCCESS) {
+                        break;
                     }
                 }
             }
-            return true;
+            success |= result.getType() == EnumActionResult.SUCCESS;
+            ItemStack output = result.getResult();
+            if (output != heldItem || output.stackSize != prevSize) {
+                if (player.capabilities.isCreativeMode && output.stackSize < prevSize) {
+                    output.stackSize = prevSize;
+                }
+                player.setHeldItem(hand, output);
+                if (output.stackSize <= 0) {
+                    player.setHeldItem(hand, null);
+                    ForgeEventFactory.onPlayerDestroyItem(player, output, hand);
+                }
+            }
         }
-        return false;
+        return success;
     }
 
     public boolean interact(StructurePlayerHandler handler, EntityPlayer player, EnumHand hand) {
@@ -138,6 +136,10 @@ public class ServerStructureHandler {
 
     public void removeEntity(StructureEntity entity) {
         this.structures.remove(entity);
+    }
+
+    public List<StructureEntity> getStructures() {
+        return this.structures;
     }
 
     public StructureEntity getMousedOver(EntityPlayer player) {

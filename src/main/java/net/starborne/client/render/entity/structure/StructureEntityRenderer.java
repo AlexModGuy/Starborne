@@ -31,14 +31,13 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
         super(renderManager);
     }
 
-    @Override
-    public void doRender(StructureEntity entity, double x, double y, double z, float entityYaw, float partialTicks) {
-        this.bindEntityTexture(entity);
+    public static void renderWorld(StructureEntity entity, double x, double y, double z, float yaw, float pitch, float roll, float partialTicks) {
+        MC.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
-        GlStateManager.rotate(entityYaw, 0.0F, 1.0F, 0.0F);
-        GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, 1.0F, 0.0F, 0.0F);
-        GlStateManager.rotate(entity.rotationRoll, 0.0F, 0.0F, 1.0F);
+        GlStateManager.rotate(yaw, 0.0F, 1.0F, 0.0F);
+        GlStateManager.rotate(pitch, 1.0F, 0.0F, 0.0F);
+        GlStateManager.rotate(roll, 0.0F, 0.0F, 1.0F);
         GlStateManager.disableLighting();
         for (BlockRenderLayer layer : BlockRenderLayer.values()) {
             for (Map.Entry<BlockPos, EntityChunk> entry : entity.structureWorld.getChunks().entrySet()) {
@@ -93,7 +92,6 @@ public class StructureEntityRenderer extends Render<StructureEntity> {
             }
         }
         GlStateManager.popMatrix();
-        super.doRender(entity, x, y, z, entityYaw, partialTicks);
     }
 
     @Override

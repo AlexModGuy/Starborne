@@ -61,7 +61,10 @@ public class ClientEntityChunk extends EntityChunk {
 
     @Override
     protected void removeTileEntity(BlockPos position) {
-        this.renderedChunk.removeTileEntity(this.getTileEntity(position));
+        TileEntity tile = this.getTileEntity(position);
+        if (tile != null) {
+            this.renderedChunk.removeTileEntity(tile);
+        }
         super.removeTileEntity(position);
     }
 

@@ -205,30 +205,32 @@ public class StructurePlayerHandler {
         if (this.interactCooldown <= 0) {
             this.interactCooldown = 3;
             BlockPos pos = this.mouseOver.getBlockPos();
-            Vec3d hitVec = this.mouseOver.hitVec;
-            IBlockState state = this.entity.structureWorld.getBlockState(pos);
-            float hitX = (float) (hitVec.xCoord - pos.getX());
-            float hitY = (float) (hitVec.yCoord - pos.getY());
-            float hitZ = (float) (hitVec.zCoord - pos.getZ());
-            ItemStack heldItem = this.player.getHeldItem(hand);
-            Starborne.NETWORK_WRAPPER.sendToServer(new InteractBlockEntityMessage(this.entity.getEntityId(), pos, this.mouseOver.sideHit, hitX, hitY, hitZ, hand));
-            if (state.getBlock().onBlockActivated(this.entity.structureWorld, pos, state, this.player, hand, heldItem, this.mouseOver.sideHit, hitX, hitY, hitZ)) {
-                this.player.swingArm(hand);
-                return true;
-            } else if (heldItem != null) {
-                int size = heldItem.stackSize;
-                EnumActionResult actionResult = heldItem.onItemUse(this.player, this.entity.structureWorld, pos, hand, this.mouseOver.sideHit, hitX, hitY, hitZ);
-                if (actionResult == EnumActionResult.SUCCESS) {
+            if (this.entity.structureWorld.isValid(pos)) {
+                Vec3d hitVec = this.mouseOver.hitVec;
+                IBlockState state = this.entity.structureWorld.getBlockState(pos);
+                float hitX = (float) (hitVec.xCoord - pos.getX());
+                float hitY = (float) (hitVec.yCoord - pos.getY());
+                float hitZ = (float) (hitVec.zCoord - pos.getZ());
+                ItemStack heldItem = this.player.getHeldItem(hand);
+                Starborne.NETWORK_WRAPPER.sendToServer(new InteractBlockEntityMessage(this.entity.getEntityId(), pos, this.mouseOver.sideHit, hitX, hitY, hitZ, hand));
+                if (state.getBlock().onBlockActivated(this.entity.structureWorld, pos, state, this.player, hand, heldItem, this.mouseOver.sideHit, hitX, hitY, hitZ)) {
                     this.player.swingArm(hand);
+                    return true;
+                } else if (heldItem != null) {
+                    int size = heldItem.stackSize;
+                    EnumActionResult actionResult = heldItem.onItemUse(this.player, this.entity.structureWorld, pos, hand, this.mouseOver.sideHit, hitX, hitY, hitZ);
+                    if (actionResult == EnumActionResult.SUCCESS) {
+                        this.player.swingArm(hand);
+                    }
+                    if (this.player.capabilities.isCreativeMode && heldItem.stackSize < size) {
+                        heldItem.stackSize = size;
+                    }
+                    if (heldItem.stackSize <= 0) {
+                        this.player.setHeldItem(hand, null);
+                        ForgeEventFactory.onPlayerDestroyItem(this.player, heldItem, hand);
+                    }
+                    return true;
                 }
-                if (this.player.capabilities.isCreativeMode && heldItem.stackSize < size) {
-                    heldItem.stackSize = size;
-                }
-                if (heldItem.stackSize <= 0) {
-                    this.player.setHeldItem(hand, null);
-                    ForgeEventFactory.onPlayerDestroyItem(this.player, heldItem, hand);
-                }
-                return true;
             }
         }
         return false;

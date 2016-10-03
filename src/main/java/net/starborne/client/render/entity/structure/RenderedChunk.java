@@ -164,7 +164,6 @@ public class RenderedChunk {
                 GlStateManager.disableAlpha();
                 GlStateManager.doPolygonOffset(0.0F, 0.0F);
                 GlStateManager.disablePolygonOffset();
-                GlStateManager.disableOutlineMode();
                 GlStateManager.depthMask(true);
                 RenderHelper.enableStandardItemLighting();
                 GlStateManager.popMatrix();
@@ -261,20 +260,20 @@ public class RenderedChunk {
                             position.setPos(blockX, blockY, blockZ);
                             globalPosition.setPos(offsetX + blockX, offsetY + blockY, offsetZ + blockZ);
                             state = state.getActualState(this.entity.structureWorld, globalPosition);
+                            builder.setTranslation(position.getX() - globalPosition.getX(), position.getY() - globalPosition.getY(), position.getZ() - globalPosition.getZ());
                             switch (renderType) {
                                 case MODEL:
                                     IBakedModel model = BLOCK_RENDERER_DISPATCHER.getModelForState(state);
                                     state = state.getBlock().getExtendedState(state, this.entity.structureWorld, position);
-                                    BLOCK_MODEL_RENDERER.renderModel(this.entity.structureWorld, model, state, position, builder, true);
+                                    BLOCK_MODEL_RENDERER.renderModel(this.entity.structureWorld, model, state, globalPosition, builder, true);
                                     break;
                                 case ENTITYBLOCK_ANIMATED:
                                     break;
                                 case LIQUID:
-                                    builder.setTranslation(position.getX() - globalPosition.getX(), position.getY() - globalPosition.getY(), position.getZ() - globalPosition.getZ());
                                     BLOCK_RENDERER_DISPATCHER.fluidRenderer.renderFluid(this.entity.structureWorld, state, globalPosition, builder);
-                                    builder.setTranslation(0, 0, 0);
                                     break;
                             }
+                            builder.setTranslation(0, 0, 0);
                         }
                     }
                 }
