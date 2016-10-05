@@ -29,7 +29,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import net.starborne.Starborne;
 import net.starborne.server.biome.BiomeHandler;
-import net.starborne.server.blocksystem.chunk.BlockSystemChunk;
 import net.starborne.server.entity.BlockSystemControlEntity;
 import net.starborne.server.util.Matrix;
 
@@ -126,7 +125,7 @@ public abstract class BlockSystem extends World {
         compound.setDouble("PosZ", this.posZ);
         compound.setFloat("RotationX", this.rotationX);
         compound.setFloat("RotationY", this.rotationY);
-        compound.setFloat("RotationZ", this.rotationZ);
+        compound.setFloat("RotationZ", this.rotationZ); //TODO Load blocks from chunk
         return compound;
     }
 
@@ -533,17 +532,6 @@ public abstract class BlockSystem extends World {
         this.rotationX = rotationX;
         this.rotationY = rotationY;
         this.rotationZ = rotationZ;
-    }
-
-    private class ChunkQueue {
-        private boolean remove;
-        private BlockPos position;
-        private BlockSystemChunk chunk;
-
-        private ChunkQueue(BlockPos position, BlockSystemChunk chunk, boolean remove) {
-            this.remove = remove;
-            this.position = position;
-            this.chunk = chunk;
-        }
+        this.recalculateMatrices();
     }
 }

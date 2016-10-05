@@ -38,7 +38,7 @@ public class ClientBlockSystemListener implements IWorldEventListener {
     }
 
     @Override
-    public void markBlockRangeForRenderUpdate(int x1, int y1, int z1, int x2, int y2, int z2) {
+    public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
     }
 
     @Override

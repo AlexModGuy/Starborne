@@ -1,5 +1,6 @@
 package net.starborne.client.render.blocksystem;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
@@ -16,7 +17,14 @@ public class BlockSystemRenderHandler {
     }
 
     public static void removeBlockSystem(BlockSystem blockSystem) {
-        RENDERERS.remove(blockSystem);
+        BlockSystemRenderer renderer = RENDERERS.remove(blockSystem);
+        if (renderer != null) {
+            renderer.delete();
+        }
+    }
+
+    public static void removeAll() {
+        RENDERERS.clear();
     }
 
     public static BlockSystemRenderer get(BlockSystem blockSystem) {
@@ -36,13 +44,16 @@ public class BlockSystemRenderHandler {
             float rotationX = blockSystem.prevRotationX + (blockSystem.rotationX - blockSystem.prevRotationX) * partialTicks;
             float rotationY = blockSystem.prevRotationY + (blockSystem.rotationY - blockSystem.prevRotationY) * partialTicks;
             float rotationZ = blockSystem.prevRotationZ + (blockSystem.rotationZ - blockSystem.prevRotationZ) * partialTicks;
-            renderer.renderBlockSystem(player, entityX - playerX, entityY - playerY, entityZ - playerZ, rotationX, rotationY, rotationZ, partialTicks);
+            int framerate = Math.min(Minecraft.getDebugFPS(), Minecraft.getMinecraft().gameSettings.limitFramerate);
+            framerate = Math.max(framerate, 60);
+            long finishTimeNano = Math.max((long) (1000000000 / framerate / 4) - System.nanoTime(), 0);
+            renderer.renderBlockSystem(player, entityX - playerX, entityY - playerY, entityZ - playerZ, rotationX, rotationY, rotationZ, partialTicks, finishTimeNano);
         }
     }
 
     public static void update() {
-        for (Map.Entry<BlockSystem, BlockSystemRenderer> entry : RENDERERS.entrySet()) {
+        /*for (Map.Entry<BlockSystem, BlockSystemRenderer> entry : RENDERERS.entrySet()) {
             entry.getValue().update();
-        }
+        }*/
     }
 }

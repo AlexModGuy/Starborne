@@ -8,6 +8,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldSavedData;
 import net.minecraft.world.storage.MapStorage;
 import net.minecraftforge.common.util.Constants;
+import net.starborne.Starborne;
 import net.starborne.server.blocksystem.BlockSystem;
 
 import java.util.HashMap;
@@ -52,14 +53,14 @@ public class BlockSystemSavedData extends WorldSavedData {
         for (int i = 0; i < partiansList.tagCount(); i++) {
             this.partians.add(BlockPos.fromLong(((NBTTagLong) partiansList.get(i)).getLong()));
         }
-        /*NBTTagList blockSystemsList = compound.getTagList("BlockSystems", Constants.NBT.TAG_COMPOUND);
+        NBTTagList blockSystemsList = compound.getTagList("BlockSystems", Constants.NBT.TAG_COMPOUND);
         for (int i = 0; i < blockSystemsList.tagCount(); i++) {
             NBTTagCompound tag = blockSystemsList.getCompoundTagAt(i);
             BlockSystem system = Starborne.PROXY.createBlockSystem(this.world, BlockSystem.nextID++);
             system.deserialize(tag);
             Starborne.PROXY.getBlockSystemHandler(this.world).loadBlockSystem(system);
             this.addBlockSystem(system);
-        }*/
+        }
     }
 
     @Override

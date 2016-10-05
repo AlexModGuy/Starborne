@@ -4,6 +4,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.starborne.client.render.blocksystem.chunk.BlockSystemRenderChunk;
+import net.starborne.client.render.blocksystem.chunk.RenderChunkFactory;
 import net.starborne.server.blocksystem.BlockSystem;
 
 import javax.annotation.Nullable;
@@ -15,23 +17,25 @@ public class BlockSystemViewFrustum {
     protected int chunkRangeY;
     protected int chunkRangeX;
     protected int chunkRangeZ;
-    public RenderedChunk[] chunks;
+    protected RenderChunkFactory factory;
+    public BlockSystemRenderChunk[] chunks;
 
-    public BlockSystemViewFrustum(BlockSystemRenderer renderer, BlockSystem blockSystem, int renderDistance) {
+    public BlockSystemViewFrustum(BlockSystemRenderer renderer, BlockSystem blockSystem, int renderDistance, RenderChunkFactory factory) {
         this.renderer = renderer;
         this.blockSystem = blockSystem;
+        this.factory = factory;
         this.setRenderDistance(renderDistance);
         this.populateChunks();
     }
 
     protected void populateChunks() {
         int chunkCount = this.chunkRangeX * this.chunkRangeY * this.chunkRangeZ;
-        this.chunks = new RenderedChunk[chunkCount];
+        this.chunks = new BlockSystemRenderChunk[chunkCount];
         for (int chunkX = 0; chunkX < this.chunkRangeX; ++chunkX) {
             for (int chunkY = 0; chunkY < this.chunkRangeY; ++chunkY) {
                 for (int chunkZ = 0; chunkZ < this.chunkRangeZ; ++chunkZ) {
                     int arrayIndex = (chunkZ * this.chunkRangeY + chunkY) * this.chunkRangeX + chunkX;
-                    this.chunks[arrayIndex] = new RenderedChunk(this.blockSystem);
+                    this.chunks[arrayIndex] = this.factory.create(this.blockSystem, this.renderer);
                     this.chunks[arrayIndex].setPosition(chunkX * 16, chunkY * 16, chunkZ * 16);
                 }
             }
@@ -39,16 +43,16 @@ public class BlockSystemViewFrustum {
     }
 
     public void delete() {
-        for (RenderedChunk chunk : this.chunks) {
+        for (BlockSystemRenderChunk chunk : this.chunks) {
             chunk.delete();
         }
     }
 
     protected void setRenderDistance(int renderRange) {
-        int horinontalRange = renderRange * 2 + 1;
-        this.chunkRangeX = horinontalRange;
+        int horizontalRange = renderRange * 2 + 1;
+        this.chunkRangeX = horizontalRange;
         this.chunkRangeY = 16;
-        this.chunkRangeZ = horinontalRange;
+        this.chunkRangeZ = horizontalRange;
     }
 
     public void updateChunkPositions(double viewEntityX, double viewEntityZ) {
@@ -61,7 +65,7 @@ public class BlockSystemViewFrustum {
                 int z = this.getBaseCoordinate(baseZ, blockRangeX, chunkZ);
                 for (int chunkY = 0; chunkY < this.chunkRangeY; ++chunkY) {
                     int y = chunkY * 16;
-                    RenderedChunk chunk = this.chunks[(chunkZ * this.chunkRangeY + chunkY) * this.chunkRangeX + chunkX];
+                    BlockSystemRenderChunk chunk = this.chunks[(chunkZ * this.chunkRangeY + chunkY) * this.chunkRangeX + chunkX];
                     chunk.setPosition(x, y, z);
                 }
             }
@@ -100,15 +104,15 @@ public class BlockSystemViewFrustum {
                         chunkZ += this.chunkRangeZ;
                     }
                     int chunkIndex = (chunkZ * this.chunkRangeY + chunkY) * this.chunkRangeX + chunkX;
-                    RenderedChunk chunk = this.chunks[chunkIndex];
-                    chunk.setRequiresUpdate(requiresUpdate);
+                    BlockSystemRenderChunk chunk = this.chunks[chunkIndex];
+                    chunk.setNeedsUpdate(requiresUpdate);
                 }
             }
         }
     }
 
     @Nullable
-    protected RenderedChunk getChunk(BlockPos pos) {
+    protected BlockSystemRenderChunk getChunk(BlockPos pos) {
         int chunkX = MathHelper.bucketInt(pos.getX(), 16);
         int chunkY = MathHelper.bucketInt(pos.getY(), 16);
         int chunkZ = MathHelper.bucketInt(pos.getZ(), 16);

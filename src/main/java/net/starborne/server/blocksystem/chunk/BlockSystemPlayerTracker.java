@@ -121,7 +121,7 @@ public class BlockSystemPlayerTracker {
     public boolean sendToPlayers() {
         if (this.sentToPlayers) {
             return true;
-        } else if (this.providingChunk == null || !this.providingChunk.isPopulated()) {
+        } else if (this.providingChunk == null || this.providingChunk.isEmpty()) {
             return false;
         } else {
             this.changeCount = 0;

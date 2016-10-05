@@ -74,6 +74,7 @@ public class ClientEventHandler {
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
         Starborne.PROXY.getBlockSystemHandler(event.getWorld()).unloadWorld();
+        BlockSystemRenderHandler.removeAll();
     }
 
     @SubscribeEvent
