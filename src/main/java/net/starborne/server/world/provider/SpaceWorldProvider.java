@@ -3,7 +3,7 @@ package net.starborne.server.world.provider;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.chunk.IChunkGenerator;
-import net.starborne.server.world.generator.SpaceChunkGenerator;
+import net.starborne.server.world.generator.BlankChunkGenerator;
 
 public class SpaceWorldProvider extends WorldProvider {
     @Override
@@ -34,6 +34,6 @@ public class SpaceWorldProvider extends WorldProvider {
 
     @Override
     public IChunkGenerator createChunkGenerator() {
-        return new SpaceChunkGenerator(this.worldObj);
+        return new BlankChunkGenerator(this.worldObj);
     }
 }

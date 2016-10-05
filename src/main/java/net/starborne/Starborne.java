@@ -6,18 +6,25 @@ import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.starborne.server.ServerProxy;
+import net.starborne.server.command.BlockSystemCommand;
 import net.starborne.server.core.StarbornePlugin;
 import net.starborne.server.message.BaseMessage;
-import net.starborne.server.message.BreakBlockEntityMessage;
-import net.starborne.server.message.EntityChunkMessage;
-import net.starborne.server.message.InteractBlockEntityMessage;
-import net.starborne.server.message.PlayEventEntityMessage;
-import net.starborne.server.message.SetEntityBlockMessage;
+import net.starborne.server.message.blocksystem.BreakBlockMessage;
+import net.starborne.server.message.blocksystem.ChunkMessage;
+import net.starborne.server.message.blocksystem.InteractBlockMessage;
+import net.starborne.server.message.blocksystem.MultiBlockUpdateMessage;
+import net.starborne.server.message.blocksystem.PlayEventMessage;
+import net.starborne.server.message.blocksystem.SetBlockMessage;
+import net.starborne.server.message.blocksystem.TrackMessage;
+import net.starborne.server.message.blocksystem.UnloadChunkMessage;
+import net.starborne.server.message.blocksystem.UntrackMessage;
+import net.starborne.server.message.blocksystem.UpdateBlockEntityMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -45,11 +52,16 @@ public class Starborne {
             FMLCommonHandler.instance().exitJava(1, false);
         }
 
-        Starborne.registerMessage(BreakBlockEntityMessage.class, Side.SERVER, Side.CLIENT);
-        Starborne.registerMessage(EntityChunkMessage.class, Side.CLIENT);
-        Starborne.registerMessage(InteractBlockEntityMessage.class, Side.SERVER);
-        Starborne.registerMessage(PlayEventEntityMessage.class, Side.CLIENT);
-        Starborne.registerMessage(SetEntityBlockMessage.class, Side.CLIENT);
+        Starborne.registerMessage(InteractBlockMessage.class, Side.SERVER);
+        Starborne.registerMessage(BreakBlockMessage.class, Side.SERVER, Side.CLIENT);
+        Starborne.registerMessage(ChunkMessage.class, Side.CLIENT);
+        Starborne.registerMessage(PlayEventMessage.class, Side.CLIENT);
+        Starborne.registerMessage(SetBlockMessage.class, Side.CLIENT);
+        Starborne.registerMessage(TrackMessage.class, Side.CLIENT);
+        Starborne.registerMessage(UntrackMessage.class, Side.CLIENT);
+        Starborne.registerMessage(UpdateBlockEntityMessage.class, Side.CLIENT);
+        Starborne.registerMessage(MultiBlockUpdateMessage.class, Side.CLIENT);
+        Starborne.registerMessage(UnloadChunkMessage.class, Side.CLIENT);
 
         Starborne.PROXY.onPreInit();
     }
@@ -62,6 +74,11 @@ public class Starborne {
     @Mod.EventHandler
     public void onPostInit(FMLPostInitializationEvent event) {
         Starborne.PROXY.onPostInit();
+    }
+
+    @Mod.EventHandler
+    public void onServerStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new BlockSystemCommand());
     }
 
     private static <T extends BaseMessage<T> & IMessageHandler<T, IMessage>> void registerMessage(Class<T> message, Side... sides) {

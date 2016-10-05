@@ -26,7 +26,7 @@ public class EntityListTransformer extends TransformerClass {
         MethodNode createEntityFromNBT = this.getMethod(classNode, "createEntityFromNBT", NBTTagCompound.class, World.class, Entity.class);
         Instruction createEntityInstruction = this.instruction()
                 .var(ALOAD, 1)
-                .method(INVOKESTATIC, StarborneHooks.class, "getRealWorld", World.class, World.class)
+                .method(INVOKESTATIC, StarborneHooks.class, "getMainWorld", World.class, World.class)
                 .var(ASTORE, 1);
         Predicate<AbstractInsnNode> createEntityNode = node -> node.getOpcode() == ASTORE && ((VarInsnNode) node).var == 2;
         if (createEntityByName != null) {

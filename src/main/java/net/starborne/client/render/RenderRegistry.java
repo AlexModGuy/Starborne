@@ -7,9 +7,9 @@ import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.item.Item;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.starborne.Starborne;
-import net.starborne.client.render.entity.structure.StructureEntityRenderer;
+import net.starborne.client.render.entity.BlockSystemControlRenderer;
 import net.starborne.server.block.BlockRegistry;
-import net.starborne.server.entity.structure.StructureEntity;
+import net.starborne.server.entity.BlockSystemControlEntity;
 import net.starborne.server.item.ItemRegistry;
 
 public class RenderRegistry {
@@ -17,7 +17,7 @@ public class RenderRegistry {
     private static ItemModelMesher MODEL_MESHER;
 
     public static void onPreInit() {
-        RenderingRegistry.registerEntityRenderingHandler(StructureEntity.class, StructureEntityRenderer::new);
+        RenderingRegistry.registerEntityRenderingHandler(BlockSystemControlEntity.class, BlockSystemControlRenderer::new);
     }
 
     public static void onInit() {

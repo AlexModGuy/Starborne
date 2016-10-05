@@ -13,17 +13,17 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import net.starborne.client.blocksystem.ClientBlockSystemHandler;
 import net.starborne.client.render.RenderRegistry;
 import net.starborne.server.ServerProxy;
-import net.starborne.server.ServerStructureHandler;
-import net.starborne.server.entity.structure.StructureEntity;
-import net.starborne.server.entity.structure.world.StructureWorld;
-import net.starborne.server.entity.structure.world.StructureWorldClient;
+import net.starborne.server.blocksystem.ServerBlockSystemHandler;
+import net.starborne.server.blocksystem.BlockSystem;
+import net.starborne.client.blocksystem.BlockSystemClient;
 import net.starborne.server.message.BaseMessage;
 
 public class ClientProxy extends ServerProxy {
-    public static final ClientStructureHandler STRUCTURE_HANDLER = new ClientStructureHandler();
     public static final Minecraft MINECRAFT = Minecraft.getMinecraft();
+    private static ClientBlockSystemHandler blockSystemHandler;
 
     @Override
     public void onPreInit() {
@@ -45,8 +45,8 @@ public class ClientProxy extends ServerProxy {
     }
 
     @Override
-    public StructureWorld createStructureWorld(StructureEntity entity) {
-        return entity.worldObj.isRemote ? new StructureWorldClient(entity) : super.createStructureWorld(entity);
+    public BlockSystem createBlockSystem(World mainWorld, int id) {
+        return mainWorld.isRemote ? new BlockSystemClient(mainWorld, id) : super.createBlockSystem(mainWorld, id);
     }
 
     @Override
@@ -55,7 +55,8 @@ public class ClientProxy extends ServerProxy {
     }
 
     @Override
-    public void pickBlock(EntityPlayer player, RayTraceResult mouseOver, TileEntity tile, World world, IBlockState state) {
+    public void pickBlock(EntityPlayer player, RayTraceResult mouseOver, World world, IBlockState state) {
+        TileEntity tile = null;
         if (player.capabilities.isCreativeMode && GuiScreen.isCtrlKeyDown() && state.getBlock().hasTileEntity(state)) {
             tile = world.getTileEntity(mouseOver.getBlockPos());
         }
@@ -79,8 +80,15 @@ public class ClientProxy extends ServerProxy {
     }
 
     @Override
-    public ServerStructureHandler getStructureHandler(World world) {
-        return world.isRemote ? STRUCTURE_HANDLER : super.getStructureHandler(world);
+    public ServerBlockSystemHandler getBlockSystemHandler(World world) {
+        if (world.isRemote) {
+            if (blockSystemHandler == null) {
+                blockSystemHandler = new ClientBlockSystemHandler(world);
+            }
+            return blockSystemHandler;
+        } else {
+            return super.getBlockSystemHandler(world);
+        }
     }
 
     @Override

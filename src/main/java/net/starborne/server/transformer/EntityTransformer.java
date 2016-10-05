@@ -19,7 +19,7 @@ public class EntityTransformer extends TransformerClass {
         if (constructor != null) {
             Instruction instruction = this.instruction()
                     .var(ALOAD, 1)
-                    .method(INVOKESTATIC, StarborneHooks.class, "getRealWorld", World.class, World.class)
+                    .method(INVOKESTATIC, StarborneHooks.class, "getMainWorld", World.class, World.class)
                     .var(ASTORE, 1);
             this.insertAfter(constructor, node -> node.getOpcode() == INVOKESPECIAL && ((MethodInsnNode) node).owner.equals("java/lang/Object"), instruction.build(), false);
             return true;
