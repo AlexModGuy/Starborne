@@ -95,21 +95,23 @@ public class RenderedChunk {
             for (BlockPos.MutableBlockPos pos : BlockPos.getAllInBoxMutable(this.position, topCorner)) {
                 IBlockState state = this.region.getBlockState(pos);
                 Block block = state.getBlock();
-                if (block.hasTileEntity(state)) {
-                    TileEntity blockEntity = this.region.getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK);
-                    if (blockEntity != null) {
-                        TileEntitySpecialRenderer<TileEntity> specialRenderer = TileEntityRendererDispatcher.instance.getSpecialRenderer(blockEntity);
-                        if (specialRenderer != null) {
-                            this.compiledChunk.addBlockEntity(blockEntity);
+                if (block != Blocks.AIR) {
+                    if (block.hasTileEntity(state)) {
+                        TileEntity blockEntity = this.region.getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK);
+                        if (blockEntity != null) {
+                            TileEntitySpecialRenderer<TileEntity> specialRenderer = TileEntityRendererDispatcher.instance.getSpecialRenderer(blockEntity);
+                            if (specialRenderer != null) {
+                                this.compiledChunk.addBlockEntity(blockEntity);
+                            }
                         }
                     }
-                }
-                for (BlockRenderLayer layer : BlockRenderLayer.values()) {
-                    if (block.canRenderInLayer(state, layer)) {
-                        ForgeHooksClient.setRenderLayer(layer);
-                        if (state.getRenderType() != EnumBlockRenderType.INVISIBLE) {
-                            this.compiledChunk.setLayerUsed(layer);
-                            break;
+                    for (BlockRenderLayer layer : BlockRenderLayer.values()) {
+                        if (block.canRenderInLayer(state, layer)) {
+                            ForgeHooksClient.setRenderLayer(layer);
+                            if (state.getRenderType() != EnumBlockRenderType.INVISIBLE) {
+                                this.compiledChunk.setLayerUsed(layer);
+                                break;
+                            }
                         }
                     }
                 }

@@ -77,7 +77,7 @@ public class BlockSystemChunkTracker {
     }
 
     public void tick() {
-        long worldTime = this.blockSystem.getTotalWorldTime();
+        long worldTime = this.blockSystem.getMainWorld().getTotalWorldTime();
 
         if (worldTime - this.previousTotalWorldTime > 8000L) {
             this.previousTotalWorldTime = worldTime;

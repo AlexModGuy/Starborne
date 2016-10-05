@@ -65,6 +65,9 @@ public class BlockSystemTrackingHandler {
             this.tracking.put(player, tracking);
             Starborne.NETWORK_WRAPPER.sendTo(new TrackMessage(blockSystem), player);
         }
+        if (blockSystem instanceof BlockSystemServer) {
+            ((BlockSystemServer) blockSystem).getChunkTracker().addPlayer(player);
+        }
         tracking.add(blockSystem);
     }
 
@@ -72,6 +75,9 @@ public class BlockSystemTrackingHandler {
         List<BlockSystem> tracking = this.tracking.get(player);
         if (tracking != null) {
             tracking.remove(blockSystem);
+            if (blockSystem instanceof BlockSystemServer) {
+                ((BlockSystemServer) blockSystem).getChunkTracker().removePlayer(player);
+            }
             if (tracking.size() <= 0) {
                 this.tracking.remove(player);
                 Starborne.NETWORK_WRAPPER.sendTo(new UntrackMessage(blockSystem), player);

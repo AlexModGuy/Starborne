@@ -4,8 +4,8 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.client.multiplayer.ChunkProviderClient;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
@@ -22,16 +22,20 @@ import java.util.Random;
 
 public class BlockSystemClient extends BlockSystem {
     private Minecraft mc = Minecraft.getMinecraft();
-    private ChunkProviderClient chunkProviderClient;
+    private MultiplayerChunkCacheBlockSystem chunkProviderClient;
 
     public BlockSystemClient(World mainWorld, int id) {
-        super(mainWorld, id);
+        super(mainWorld, id, null);
+    }
+
+    @Override
+    public void initializeBlockSystem(MinecraftServer server) {
         this.addEventListener(new ClientBlockSystemListener(this));
     }
 
     @Override
     protected IChunkProvider createChunkProvider() {
-        this.chunkProviderClient = new ChunkProviderClient(this);
+        this.chunkProviderClient = new MultiplayerChunkCacheBlockSystem(this);
         return this.chunkProviderClient;
     }
 

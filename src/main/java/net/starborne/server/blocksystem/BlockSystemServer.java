@@ -33,18 +33,22 @@ import java.util.TreeSet;
 public class BlockSystemServer extends BlockSystem {
     public boolean disableLevelSaving;
 
-    private final BlockSystemChunkTracker chunkTracker;
-    private final MinecraftServer server;
+    private BlockSystemChunkTracker chunkTracker;
+    private MinecraftServer server;
 
     protected final Set<NextTickListEntry> scheduledTicksSet = Sets.newHashSet();
     protected final TreeSet<NextTickListEntry> scheduledTicksTree = new TreeSet<>();
     protected final List<NextTickListEntry> currentScheduledTicks = new ArrayList<>();
 
     public BlockSystemServer(MinecraftServer server, World mainWorld, int id) {
-        super(mainWorld, id);
+        super(mainWorld, id, server);
+    }
+
+    @Override
+    public void initializeBlockSystem(MinecraftServer server) {
         this.server = server;
-        this.chunkTracker = new BlockSystemChunkTracker(this);
         this.addEventListener(new ServerBlockSystemListener(this));
+        this.chunkTracker = new BlockSystemChunkTracker(this);
     }
 
     @Override

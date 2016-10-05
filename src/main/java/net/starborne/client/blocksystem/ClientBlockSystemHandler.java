@@ -79,9 +79,6 @@ public class ClientBlockSystemHandler extends ServerBlockSystemHandler {
     @Override
     public void addBlockSystem(BlockSystem blockSystem) {
         super.addBlockSystem(blockSystem);
-        for (EntityPlayer player : blockSystem.getMainWorld().playerEntities) {
-            blockSystem.addPlayerHandler(player);
-        }
         BlockSystemRenderHandler.addBlockSystem(blockSystem);
     }
 

@@ -99,16 +99,19 @@ public class BlockSystemChunk extends Chunk {
             for (int y = 0; y < 16; y++) {
                 if (this.partionPositions[y] == null) {
                     this.partionPositions[y] = ChunkPartionHandler.generateValidPartionPosition(this.mainWorld);
-                    this.clearSpace(y);
                 }
             }
         }
     }
 
-    protected TileEntity createNewTileEntity(BlockPos pos)
-    {
+    protected TileEntity createNewTileEntity(BlockPos pos) {
         IBlockState state = this.getBlockState(pos);
         Block block = state.getBlock();
         return !block.hasTileEntity(state) ? null : block.createTileEntity(this.mainWorld, state);
+    }
+
+    @Override
+    public boolean isPopulated() {
+        return true;
     }
 }

@@ -9,6 +9,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
@@ -76,14 +77,16 @@ public abstract class BlockSystem extends World {
 
     protected int id;
 
-    public BlockSystem(World mainWorld, int id) {
+    public BlockSystem(World mainWorld, int id, MinecraftServer server) {
         super(new BlockSystemSaveHandler(), mainWorld.getWorldInfo(), mainWorld.provider, mainWorld.theProfiler, mainWorld.isRemote);
         this.mainWorld = mainWorld;
         this.id = id;
         this.chunkProvider = this.createChunkProvider();
-        this.setBlockState(BlockPos.ORIGIN, Blocks.STONE.getDefaultState());
+        this.initializeBlockSystem(server);
         this.recalculateMatrices();
     }
+
+    public abstract void initializeBlockSystem(MinecraftServer server);
 
     public void setID(int id) {
         this.id = id;
@@ -321,6 +324,8 @@ public abstract class BlockSystem extends World {
 
     @Override
     public void tick() {
+        this.setBlockState(BlockPos.ORIGIN, Blocks.STONE.getDefaultState(), 3);
+
         this.prevPosX = this.posX;
         this.prevPosY = this.posY;
         this.prevPosZ = this.posZ;

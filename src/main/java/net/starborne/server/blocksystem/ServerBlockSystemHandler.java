@@ -19,8 +19,6 @@ import java.util.List;
 import java.util.Map;
 
 public class ServerBlockSystemHandler {
-    //TODO Multiple instances when there are multiple worlds?
-
     protected World world;
 
     protected Map<Integer, BlockSystem> blockSystems = new HashMap<>();
@@ -134,6 +132,9 @@ public class ServerBlockSystemHandler {
         this.blockSystems.put(blockSystem.getID(), blockSystem);
         if (!this.world.isRemote) {
             BlockSystemSavedData.get(this.world).addBlockSystem(blockSystem);
+        }
+        for (EntityPlayer player : this.world.playerEntities) {
+            blockSystem.addPlayerHandler(player);
         }
     }
 
