@@ -300,10 +300,12 @@ public abstract class BlockSystem extends World {
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
-        Vec3d transformedVelocity = this.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
-        xSpeed = transformedVelocity.xCoord;
-        ySpeed = transformedVelocity.yCoord;
-        zSpeed = transformedVelocity.zCoord;
+        if (particleType != EnumParticleTypes.REDSTONE) {
+            Vec3d transformedVelocity = this.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
+            xSpeed = transformedVelocity.xCoord;
+            ySpeed = transformedVelocity.yCoord;
+            zSpeed = transformedVelocity.zCoord;
+        }
         super.spawnParticle(particleType, posX, posY, posZ, xSpeed, ySpeed, zSpeed, parameters);
     }
 
@@ -314,10 +316,12 @@ public abstract class BlockSystem extends World {
         posX = transformed.getX();
         posY = transformed.getY();
         posZ = transformed.getZ();
-        Vec3d transformedVelocity = this.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
-        xSpeed = transformedVelocity.xCoord;
-        ySpeed = transformedVelocity.yCoord;
-        zSpeed = transformedVelocity.zCoord;
+        if (particleType != EnumParticleTypes.REDSTONE) {
+            Vec3d transformedVelocity = this.getTransformedVector(new Vec3d(xSpeed, ySpeed, zSpeed));
+            xSpeed = transformedVelocity.xCoord;
+            ySpeed = transformedVelocity.yCoord;
+            zSpeed = transformedVelocity.zCoord;
+        }
         super.spawnParticle(particleType, ignoreRange, posX, posY, posZ, xSpeed, ySpeed, zSpeed, parameters);
     }
 

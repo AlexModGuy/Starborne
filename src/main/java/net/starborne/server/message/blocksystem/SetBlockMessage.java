@@ -47,6 +47,10 @@ public class SetBlockMessage extends BaseMessage<SetBlockMessage> {
     public void onReceiveClient(Minecraft client, WorldClient world, EntityPlayerSP player, MessageContext context) {
         BlockSystem blockSystem = Starborne.PROXY.getBlockSystemHandler(world).getBlockSystem(this.blockSystem);
         if (blockSystem != null) {
+            int x = this.position.getX();
+            int y = this.position.getY();
+            int z = this.position.getZ();
+            blockSystem.markBlockRangeForRenderUpdate(x, y, z, x, y, z);
             blockSystem.setBlockState(this.position, this.state);
         }
     }

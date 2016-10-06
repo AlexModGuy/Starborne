@@ -9,8 +9,10 @@ import net.starborne.server.message.blocksystem.UntrackMessage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class BlockSystemTrackingHandler {
     public static final Map<WorldServer, BlockSystemTrackingHandler> HANDLERS = new HashMap<>();
@@ -18,7 +20,7 @@ public class BlockSystemTrackingHandler {
 
     private WorldServer world;
 
-    private Map<EntityPlayer, List<BlockSystem>> tracking = new HashMap<>();
+    private Map<EntityPlayer, Set<BlockSystem>> tracking = new HashMap<>();
 
     private long lastUpdate;
 
@@ -39,7 +41,7 @@ public class BlockSystemTrackingHandler {
                             this.track(player, blockSystem);
                         }
                     }
-                    List<BlockSystem> tracking = this.tracking.get(player);
+                    Set<BlockSystem> tracking = this.tracking.get(player);
                     if (tracking != null) {
                         List<BlockSystem> untrack = new ArrayList<>(tracking.size());
                         for (BlockSystem blockSystem : tracking) {
@@ -59,28 +61,31 @@ public class BlockSystemTrackingHandler {
     }
 
     public void track(EntityPlayerMP player, BlockSystem blockSystem) {
-        List<BlockSystem> tracking = this.tracking.get(player);
+        Set<BlockSystem> tracking = this.tracking.get(player);
         if (tracking == null) {
-            tracking = new ArrayList<>();
+            tracking = new HashSet<>();
             this.tracking.put(player, tracking);
+        }
+        if (!tracking.contains(blockSystem)) {
+            tracking.add(blockSystem);
             Starborne.NETWORK_WRAPPER.sendTo(new TrackMessage(blockSystem), player);
+            if (blockSystem instanceof BlockSystemServer) {
+                ((BlockSystemServer) blockSystem).getChunkTracker().addPlayer(player);
+            }
         }
-        if (blockSystem instanceof BlockSystemServer) {
-            ((BlockSystemServer) blockSystem).getChunkTracker().addPlayer(player);
-        }
-        tracking.add(blockSystem);
     }
 
     public void untrack(EntityPlayerMP player, BlockSystem blockSystem) {
-        List<BlockSystem> tracking = this.tracking.get(player);
+        Set<BlockSystem> tracking = this.tracking.get(player);
         if (tracking != null) {
-            tracking.remove(blockSystem);
-            if (blockSystem instanceof BlockSystemServer) {
-                ((BlockSystemServer) blockSystem).getChunkTracker().removePlayer(player);
-            }
-            if (tracking.size() <= 0) {
-                this.tracking.remove(player);
+            if (tracking.remove(blockSystem)) {
+                if (blockSystem instanceof BlockSystemServer) {
+                    ((BlockSystemServer) blockSystem).getChunkTracker().removePlayer(player);
+                }
                 Starborne.NETWORK_WRAPPER.sendTo(new UntrackMessage(blockSystem), player);
+                if (tracking.size() <= 0) {
+                    this.tracking.remove(player);
+                }
             }
         }
     }

@@ -163,7 +163,7 @@ public class BlockSystemChunkTracker {
             tracker = new BlockSystemPlayerTracker(this, chunkX, chunkZ);
             this.playerTrackers.put(index, tracker);
             this.playerTrackerList.add(tracker);
-            if (tracker.getProvidingChunk() == null) {
+            if (tracker.getProvidingChunk() == null || tracker.getProvidingChunk().isEmpty()) {
                 this.requestQueue.add(tracker);
             }
             if (!tracker.sendToPlayers()) {

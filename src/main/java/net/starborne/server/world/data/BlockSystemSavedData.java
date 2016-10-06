@@ -49,6 +49,8 @@ public class BlockSystemSavedData extends WorldSavedData {
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         this.world = READING_WORLD.get();
+        this.partians.clear();
+        this.blockSystems.clear();
         NBTTagList partiansList = compound.getTagList("Partians", Constants.NBT.TAG_LONG);
         for (int i = 0; i < partiansList.tagCount(); i++) {
             this.partians.add(BlockPos.fromLong(((NBTTagLong) partiansList.get(i)).getLong()));

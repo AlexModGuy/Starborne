@@ -61,7 +61,12 @@ public class MultiBlockUpdateMessage extends BaseMessage<MultiBlockUpdateMessage
         BlockSystem blockSystem = Starborne.PROXY.getBlockSystemHandler(world).getBlockSystem(this.blockSystem);
         if (blockSystem != null) {
             for (BlockUpdateData update : this.updates) {
-                blockSystem.setBlockState(update.getPos(), update.getState(), 3);
+                BlockPos pos = update.getPos();
+                int x = pos.getX();
+                int y = pos.getY();
+                int z = pos.getZ();
+                blockSystem.markBlockRangeForRenderUpdate(x, y, z, x, y, z);
+                blockSystem.setBlockState(pos, update.getState(), 3);
             }
         }
     }
