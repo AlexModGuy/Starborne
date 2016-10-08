@@ -9,10 +9,17 @@ import net.starborne.Starborne;
 import net.starborne.server.util.HarvestLevels;
 
 public class BlockRegistry {
-    public static final OreBlock COPPER_ORE = new OreBlock(2.0F, HarvestLevels.WOOD);
+    public static final OreBlock COPPER_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
+    public static final OreBlock TIN_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
+    public static final OreBlock ALUMINIUM_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
+    public static final OreBlock PETALITE_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
 
     public static void onPreInit() {
         BlockRegistry.register(COPPER_ORE, new ResourceLocation(Starborne.MODID, "copper_ore"), "oreCopper");
+        BlockRegistry.register(TIN_ORE, new ResourceLocation(Starborne.MODID, "tin_ore"), "oreTin");
+        BlockRegistry.register(ALUMINIUM_ORE, new ResourceLocation(Starborne.MODID, "aluminium_ore"), "oreAluminium");
+        BlockRegistry.register(PETALITE_ORE, new ResourceLocation(Starborne.MODID, "petalite_ore"), "orePetalite");
+
     }
 
     private static void register(Block block, ResourceLocation identifier) {

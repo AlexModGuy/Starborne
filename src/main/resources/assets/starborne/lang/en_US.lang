@@ -6,7 +6,15 @@ itemGroup.starborne.items=Starborne Items
 # Blocks
 
 tile.copper_ore.name=Copper Ore
+tile.tin_ore.name=Tin Ore
+tile.aluminium_ore.name=Aluminium Ore
+tile.petalite_ore.name=Petalite Ore
 
 # Items
 
 item.copper_ingot.name=Copper Ingot
+item.tin_ingot.name=Tin Ingot
+item.aluminium_ingot.name=Aluminium Ingot
+item.lithium.name=Raw Lithium
+item.iron_coal_ball.name=Iron-Coal Ball
+item.steel_ingot.name=Steel Ingot
