@@ -19,6 +19,7 @@ import net.starborne.server.dimension.DimensionHandler;
 import net.starborne.server.entity.EntityHandler;
 import net.starborne.server.item.ItemRegistry;
 import net.starborne.server.message.BaseMessage;
+import net.starborne.server.recipe.RecipeRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +30,8 @@ public class ServerProxy {
     public void onPreInit() {
         BlockRegistry.onPreInit();
         ItemRegistry.onPreInit();
+        RecipeRegistry.onPreInit();
+
         DimensionHandler.onPreInit();
         BiomeHandler.onPreInit();
         EntityHandler.onPreInit();
