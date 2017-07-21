@@ -16,6 +16,8 @@ public class BlockRegistry {
     public static final OreBlock TIN_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
     public static final OreBlock ALUMINIUM_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
     public static final OreBlock PETALITE_ORE = new OreBlock(2.0F, HarvestLevels.STONE);
+    public static final ShiplightBlock SHIPLIGHT_OFF = new ShiplightBlock(false);
+    public static final ShiplightBlock SHIPLIGHT_ON = new ShiplightBlock(true);
 
     public static final List<Block> BLOCKS = new ArrayList<>();
 
@@ -24,6 +26,8 @@ public class BlockRegistry {
         BlockRegistry.register(TIN_ORE, new ResourceLocation(Starborne.MODID, "tin_ore"), "oreTin");
         BlockRegistry.register(ALUMINIUM_ORE, new ResourceLocation(Starborne.MODID, "aluminium_ore"), "oreAluminium");
         BlockRegistry.register(PETALITE_ORE, new ResourceLocation(Starborne.MODID, "petalite_ore"), "orePetalite");
+        BlockRegistry.register(SHIPLIGHT_OFF, new ResourceLocation(Starborne.MODID, "shiplight_off"), "shiplight_off");
+        BlockRegistry.register(SHIPLIGHT_ON, new ResourceLocation(Starborne.MODID, "shiplight_on"), "shiplight_on");
     }
 
     private static void register(Block block, ResourceLocation identifier) {
