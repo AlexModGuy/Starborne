@@ -1,10 +1,10 @@
 {
     "variants": {
-        "facing=up":    { "model": "starborne:shiplight_off", "uvlock": true },
-        "facing=down":  { "model": "starborne:shiplight_off", "uvlock": true, "x": 180 },
-        "facing=east":  { "model": "starborne:shiplight_off", "uvlock": true, "x": 90, "y": 90 },
-        "facing=west":  { "model": "starborne:shiplight_off", "uvlock": true, "x": 90, "y": 270 },
-        "facing=south": { "model": "starborne:shiplight_off", "uvlock": true, "x": 90, "y": 180 },
-        "facing=north": { "model": "starborne:shiplight_off", "uvlock": true, "x": 90 }
+        "facing=up":    { "model": "starborne:shiplight_off", "uvlock": false },
+        "facing=down":  { "model": "starborne:shiplight_off", "uvlock": false, "x": 180 },
+        "facing=east":  { "model": "starborne:shiplight_off", "uvlock": false, "x": 90, "y": 90 },
+        "facing=west":  { "model": "starborne:shiplight_off", "uvlock": false, "x": 90, "y": 270 },
+        "facing=south": { "model": "starborne:shiplight_off", "uvlock": false, "x": 90, "y": 180 },
+        "facing=north": { "model": "starborne:shiplight_off", "uvlock": false, "x": 90 }
     }
 }
